@@ -38,6 +38,7 @@ interface TamanoVasoRow {
   id: string
   etiqueta: string
   tipo: 'vaso' | 'bebida'
+  categoria?: 'ceviche' | 'granizado' | 'bebida'
   onzas: number | null
   mililitros: number | null
   insumo_id: string | null
@@ -50,6 +51,7 @@ function mapTamanoVaso(row: TamanoVasoRow): TamanoVaso {
     id: row.id,
     etiqueta: row.etiqueta,
     tipo: row.tipo,
+    categoria: row.categoria,
     onzas: row.onzas,
     mililitros: row.mililitros,
     insumoId: row.insumo_id,
@@ -115,7 +117,7 @@ export const ventasService = {
   async listarTamanosVasoActivos(): Promise<TamanoVaso[]> {
     const { data, error } = await supabase
       .from('tamanos_vaso')
-      .select('id, etiqueta, tipo, onzas, mililitros, insumo_id, activo, created_at')
+      .select('id, etiqueta, tipo, categoria, onzas, mililitros, insumo_id, activo, created_at')
       .eq('activo', true)
       .order('id', { ascending: true })
     if (error) throw error

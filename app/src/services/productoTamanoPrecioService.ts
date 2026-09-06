@@ -97,4 +97,14 @@ export const productoTamanoPrecioService = {
     if (error) throw error
     return mapRow(data as ProductoTamanoPrecioRow)
   },
+
+  /** Elimina físicamente la configuración de un tamaño y precio para el producto (permitido para administrador). */
+  async eliminar(productoId: string, tamanoVasoId: string): Promise<void> {
+    const { error } = await supabase
+      .from('producto_tamano_precio')
+      .delete()
+      .eq('producto_id', productoId)
+      .eq('tamano_vaso_id', tamanoVasoId)
+    if (error) throw error
+  },
 }

@@ -99,7 +99,7 @@ export function AppShell({ children, hideTabs = false, rol }: AppShellProps) {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          maxWidth: 1240,
+          maxWidth: 1380,
           width: '100%',
           margin: '0 auto',
           padding: '24px 28px 48px',

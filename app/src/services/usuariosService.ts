@@ -74,4 +74,54 @@ export const usuariosService = {
     if (error) throw error
     return mapRow(data as UsuarioPerfilRow)
   },
+
+  async eliminarUsuario(id: string): Promise<void> {
+    try {
+      const { data, error } = await supabase.functions.invoke('eliminar-usuario', {
+        body: { usuario_id: id },
+      })
+      if (!error && data?.ok) {
+        return
+      }
+      if (data?.error) {
+        throw new Error(data.error)
+      }
+      if (error) {
+        if ('context' in error && error.context) {
+          try {
+            const body = await (error.context as Response).json()
+            if (body?.error) throw new Error(body.error)
+          } catch (jsonErr) {
+            if (jsonErr instanceof Error && jsonErr.message !== error.message) {
+              throw jsonErr
+            }
+          }
+        }
+        throw error
+      }
+    } catch (edgeError) {
+      const msg = edgeError instanceof Error ? edgeError.message : String(edgeError)
+      if (msg.includes('No puedes eliminar') || msg.includes('No se puede eliminar')) {
+        throw edgeError
+      }
+
+      // Fallback a RPC en caso de indisponibilidad del servicio de Edge Functions
+      const { error: rpcError } = await supabase.rpc('fn_eliminar_usuario', {
+        p_usuario_id: id,
+      })
+      if (rpcError) {
+        if (
+          rpcError.code === '23503' ||
+          rpcError.message.includes('foreign_key_violation') ||
+          rpcError.message.includes('registros históricos')
+        ) {
+          throw new Error(
+            'No se puede eliminar este usuario porque tiene registros históricos de ventas, turnos de caja o gastos asociados. Para impedir su acceso, desactívalo usando el icono de apagar.',
+          )
+        }
+        throw new Error(rpcError.message || 'No se pudo eliminar el usuario.')
+      }
+    }
+  },
 }
+

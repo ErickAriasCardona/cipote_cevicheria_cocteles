@@ -8,11 +8,13 @@
  * tamaños de vaso vendibles directamente.
  */
 export type TipoTamanoVaso = 'vaso' | 'bebida'
+export type CategoriaTamanoVaso = 'ceviche' | 'granizado' | 'bebida'
 
 export interface TamanoVaso {
   id: string
   etiqueta: string
   tipo: TipoTamanoVaso
+  categoria?: CategoriaTamanoVaso
   onzas: number | null
   mililitros: number | null
   insumoId: string | null

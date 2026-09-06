@@ -7,7 +7,12 @@
  * administrador (migración `20260904000007_movimientos_inventario_insert_administrador.sql`,
  * decisión de Erick 2026-09-04, Opción 2) — ver movimientosInventarioService.ts.
  */
-export type TipoMovimientoInventario = 'venta' | 'ajuste_manual' | 'inventario_inicial'
+export type TipoMovimientoInventario =
+  | 'venta'
+  | 'ajuste_manual'
+  | 'inventario_inicial'
+  | 'conteo_apertura'
+  | 'conteo_cierre'
 
 export interface MovimientoInventario {
   id: string
@@ -21,11 +26,18 @@ export interface MovimientoInventario {
   createdAt: string
 }
 
-/** Payload para registrar el conteo de inventario inicial de un insumo
- * (HU-04.2). Solo válido para `tipo_movimiento = 'inventario_inicial'`: la
- * política RLS `movimientos_inventario_insert_inicial` rechaza cualquier otro
- * valor para el rol administrador, y ningún rol puede insertar `'venta'`
- * directamente (exclusivo de service_role, BD-04). */
+export type MomentoConteo = 'apertura' | 'cierre'
+
+/** Payload para registrar el conteo de inventario diario (Apertura o Cierre) */
+export interface RegistrarConteoInventarioInput {
+  insumoId: string
+  momento: MomentoConteo
+  cantidad: number
+  usuarioId: string
+  observaciones?: string | null
+}
+
+/** Payload para registrar el conteo de inventario inicial de un insumo (legado) */
 export interface RegistrarInventarioInicialInput {
   insumoId: string
   cantidad: number

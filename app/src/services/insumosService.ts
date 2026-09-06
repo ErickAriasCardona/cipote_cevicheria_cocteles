@@ -14,25 +14,29 @@ import type { ActualizarInsumoInput, CrearInsumoInput, Insumo } from '../types/i
 interface InsumoRow {
   id: string
   nombre: string
-  tipo: 'vaso' | 'otro'
+  tipo: string
+  categoria_vaso?: 'ceviche' | 'granizado' | null
   unidad_medida: string
   stock_actual: number
   stock_minimo: number
+  stock_minimo_diario: number
   activo: boolean
   created_at: string
   updated_at: string
 }
 
-const COLUMNAS = 'id, nombre, tipo, unidad_medida, stock_actual, stock_minimo, activo, created_at, updated_at'
+const COLUMNAS = 'id, nombre, tipo, categoria_vaso, unidad_medida, stock_actual, stock_minimo, stock_minimo_diario, activo, created_at, updated_at'
 
 function mapRow(row: InsumoRow): Insumo {
   return {
     id: row.id,
     nombre: row.nombre,
     tipo: row.tipo,
+    categoriaVaso: row.categoria_vaso ?? null,
     unidadMedida: row.unidad_medida,
     stockActual: row.stock_actual,
     stockMinimo: row.stock_minimo ?? 0,
+    stockMinimoDiario: row.stock_minimo_diario ?? 0,
     activo: row.activo,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -55,8 +59,11 @@ export const insumosService = {
       .insert({
         nombre: input.nombre,
         tipo: input.tipo ?? 'otro',
+        categoria_vaso: input.tipo === 'vaso' ? (input.categoriaVaso ?? 'ceviche') : null,
         unidad_medida: input.unidadMedida ?? 'unidad',
+        stock_actual: input.stockActual ?? 0,
         stock_minimo: input.stockMinimo ?? 0,
+        stock_minimo_diario: input.stockMinimoDiario ?? 0,
       })
       .select(COLUMNAS)
       .single()
@@ -68,8 +75,11 @@ export const insumosService = {
     const payload: Partial<InsumoRow> = {}
     if (cambios.nombre !== undefined) payload.nombre = cambios.nombre
     if (cambios.tipo !== undefined) payload.tipo = cambios.tipo
+    if (cambios.categoriaVaso !== undefined) payload.categoria_vaso = cambios.categoriaVaso
     if (cambios.unidadMedida !== undefined) payload.unidad_medida = cambios.unidadMedida
+    if (cambios.stockActual !== undefined) payload.stock_actual = cambios.stockActual
     if (cambios.stockMinimo !== undefined) payload.stock_minimo = cambios.stockMinimo
+    if (cambios.stockMinimoDiario !== undefined) payload.stock_minimo_diario = cambios.stockMinimoDiario
     if (cambios.activo !== undefined) payload.activo = cambios.activo
 
     const { data, error } = await supabase

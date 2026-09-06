@@ -28,7 +28,7 @@ export function VentaForm({
   preciosPorTamano,
   onRegistrar,
 }: VentaFormProps) {
-  const [categoriaFiltro, setCategoriaFiltro] = useState<'todas' | 'ceviche' | 'bebida' | 'otro'>('todas')
+  const [categoriaFiltro, setCategoriaFiltro] = useState<'todas' | 'ceviche' | 'granizado' | 'bebida' | 'otro'>('todas')
   const [productoId, setProductoId] = useState(productos[0]?.id ?? '')
   const [tamanoVasoId, setTamanoVasoId] = useState('')
   const [cantidad, setCantidad] = useState('1')
@@ -329,19 +329,25 @@ export function VentaForm({
                 active={categoriaFiltro === 'ceviche'}
                 onClick={() => setCategoriaFiltro('ceviche')}
               >
-                🐟 Ceviches
+                Ceviches
+              </Chip>
+              <Chip
+                active={categoriaFiltro === 'granizado'}
+                onClick={() => setCategoriaFiltro('granizado')}
+              >
+                Granizados
               </Chip>
               <Chip
                 active={categoriaFiltro === 'bebida'}
                 onClick={() => setCategoriaFiltro('bebida')}
               >
-                🥤 Bebidas
+                Bebidas
               </Chip>
               <Chip
                 active={categoriaFiltro === 'otro'}
                 onClick={() => setCategoriaFiltro('otro')}
               >
-                📦 Otros
+                Otros
               </Chip>
             </div>
           </div>
@@ -355,11 +361,6 @@ export function VentaForm({
           >
             {productosFiltrados.map((producto) => (
               <option key={producto.id} value={producto.id}>
-                {producto.categoria === 'ceviche'
-                  ? '🐟 '
-                  : producto.categoria === 'bebida'
-                  ? '🥤 '
-                  : '📦 '}
                 {producto.nombre}
               </option>
             ))}
@@ -389,7 +390,7 @@ export function VentaForm({
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                  📦 Producto Individual
+                  Producto Individual
                 </span>
                 <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--brand-green)' }}>
                   {fmt(productoObj?.precio ?? 0)} c/u

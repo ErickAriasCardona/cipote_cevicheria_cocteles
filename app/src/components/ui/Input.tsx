@@ -5,9 +5,10 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: string
   small?: boolean
   containerStyle?: CSSProperties
+  labelStyle?: CSSProperties
 }
 
-export function Input({ label, error, small, id, style, containerStyle, ...props }: InputProps) {
+export function Input({ label, error, small, id, style, containerStyle, labelStyle, ...props }: InputProps) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, ...containerStyle }}>
       {label && (
@@ -17,6 +18,7 @@ export function Input({ label, error, small, id, style, containerStyle, ...props
             fontSize: small ? 12 : 13,
             fontWeight: 500,
             color: 'var(--text-secondary)',
+            ...labelStyle,
           }}
         >
           {label}
@@ -26,6 +28,7 @@ export function Input({ label, error, small, id, style, containerStyle, ...props
         id={id}
         style={{
           width: '100%',
+          minHeight: small ? 34 : 45,
           background: 'var(--input-bg)',
           border: '1px solid var(--input-border)',
           borderRadius: small ? 9 : 12,

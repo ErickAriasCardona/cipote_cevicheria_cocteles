@@ -1,34 +1,58 @@
-import { useState } from 'react'
 import type { Insumo } from '../../types/insumo'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
-import { Button } from '../ui/Button'
 import { StatusPill } from '../ui/StatusPill'
 
 interface InsumosTableProps {
   insumos: Insumo[]
   onCambiarActivo: (id: string, activo: boolean) => void
   onActualizarStockMinimo?: (id: string, stockMinimo: number) => void
+  onEditar: (insumo: Insumo) => void
 }
 
 interface FilaInsumoProps {
   insumo: Insumo
   onCambiarActivo: (insumo: Insumo) => void
   onActualizarStockMinimo?: (id: string, stockMinimo: number) => void
+  onEditar: (insumo: Insumo) => void
 }
 
-function FilaInsumo({ insumo, onCambiarActivo, onActualizarStockMinimo }: FilaInsumoProps) {
-  const [stockMinimo, setStockMinimo] = useState(String(insumo.stockMinimo ?? 0))
-  const stockMinimoNum = Math.max(0, Number(stockMinimo) || 0)
-  const hayCambio = Number.isFinite(stockMinimoNum) && stockMinimoNum !== (insumo.stockMinimo ?? 0)
+function IconoPower() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  )
+}
 
-  const esBajoStock =
-    insumo.activo &&
-    insumo.stockMinimo > 0 &&
-    insumo.stockActual <= insumo.stockMinimo
+function IconoEditar() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
 
-  function handleGuardarStockMinimo() {
-    if (!onActualizarStockMinimo || !hayCambio) return
-    onActualizarStockMinimo(insumo.id, stockMinimoNum)
+function FilaInsumo({ insumo, onCambiarActivo, onEditar }: FilaInsumoProps) {
+  const stockActualNum = Number(insumo.stockActual) || 0
+  const stockMinimoNum = Number(insumo.stockMinimo) || 0
+  const stockMinimoDiarioNum = Number(insumo.stockMinimoDiario) || 0
+
+  let estadoStock: 'bajo' | 'medio' | 'normal' = 'normal'
+  if (
+    (stockMinimoDiarioNum > 0 && stockActualNum <= stockMinimoDiarioNum) ||
+    (stockMinimoNum > 0 && stockMinimoDiarioNum === 0 && stockActualNum <= stockMinimoNum) ||
+    stockActualNum <= 0
+  ) {
+    estadoStock = 'bajo'
+  } else if (
+    (stockMinimoNum > 0 && stockActualNum <= stockMinimoNum) ||
+    (stockMinimoDiarioNum > 0 && stockActualNum <= stockMinimoDiarioNum * 1.5)
+  ) {
+    estadoStock = 'medio'
+  } else {
+    estadoStock = 'normal'
   }
 
   return (
@@ -37,88 +61,132 @@ function FilaInsumo({ insumo, onCambiarActivo, onActualizarStockMinimo }: FilaIn
         {insumo.nombre}
       </td>
       <td style={{ padding: '14px 12px' }}>
-        <StatusPill variant={insumo.tipo === 'vaso' ? 'role' : 'neutral'}>
-          {insumo.tipo === 'vaso' ? 'Vaso' : 'Otro'}
-        </StatusPill>
+        {insumo.tipo === 'vaso' ? (
+          <span
+            style={{
+              display: 'inline-block',
+              fontSize: 11.5,
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: 6,
+              color: insumo.categoriaVaso === 'granizado' ? '#06b6d4' : '#60a5fa',
+              background: insumo.categoriaVaso === 'granizado' ? 'rgba(6, 182, 212, 0.12)' : 'rgba(96, 165, 250, 0.12)',
+              border: insumo.categoriaVaso === 'granizado' ? '1px solid rgba(6, 182, 212, 0.3)' : '1px solid rgba(96, 165, 250, 0.3)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {insumo.categoriaVaso === 'granizado' ? 'Vaso Granizado' : 'Vaso Ceviche/Cóctel'}
+          </span>
+        ) : insumo.tipo === 'otro' ? (
+          <StatusPill variant="neutral">Otro</StatusPill>
+        ) : (
+          <span
+            style={{
+              display: 'inline-block',
+              fontSize: 11.5,
+              fontWeight: 700,
+              padding: '3px 8px',
+              borderRadius: 6,
+              color: '#a855f7',
+              background: 'rgba(168, 85, 247, 0.12)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {insumo.tipo}
+          </span>
+        )}
       </td>
       <td style={{ padding: '14px 12px', fontSize: 13, color: 'var(--text-secondary)' }}>
         {insumo.unidadMedida}
       </td>
-      <td style={{ padding: '14px 12px', fontSize: 13.5, fontWeight: 700, color: 'var(--brand-blue)' }}>
-        <span>{insumo.stockActual}</span>
-        {esBajoStock && (
-          <span
-            style={{
-              display: 'inline-block',
-              marginLeft: 8,
-              fontSize: 11,
-              fontWeight: 800,
-              padding: '2px 7px',
-              borderRadius: 6,
-              background: 'rgba(228, 41, 38, 0.15)',
-              color: 'var(--brand-red)',
-              border: '1px solid rgba(228, 41, 38, 0.3)',
-            }}
-          >
-            ⚠️ Bajo
-          </span>
-        )}
-      </td>
-      <td style={{ padding: '14px 12px' }}>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={stockMinimo}
-            onChange={(e) => setStockMinimo(e.target.value)}
-            style={{
-              width: 72,
-              background: 'var(--input-bg)',
-              border: '1px solid var(--input-border)',
-              borderRadius: 8,
-              padding: '6px 8px',
-              fontSize: 13,
-              fontWeight: 700,
-              color: 'var(--text-primary)',
-              fontFamily: 'var(--sans)',
-              outline: 'none',
-            }}
-          />
-          {onActualizarStockMinimo && (
-            <Button
-              type="button"
-              variant={hayCambio ? 'blue' : 'secondary'}
-              size="sm"
-              onClick={handleGuardarStockMinimo}
-              disabled={!hayCambio}
-              style={{ padding: '5px 10px', fontSize: 11.5 }}
-            >
-              Guardar
-            </Button>
-          )}
-        </div>
-      </td>
-      <td style={{ padding: '14px 12px' }}>
-        <StatusPill variant={insumo.activo ? 'positive' : 'destructive'}>
-          {insumo.activo ? 'Activo' : 'Inactivo'}
-        </StatusPill>
-      </td>
-      <td style={{ padding: '14px 12px' }}>
-        <Button
-          type="button"
-          variant={insumo.activo ? 'destructive' : 'activate'}
-          size="sm"
-          onClick={() => onCambiarActivo(insumo)}
+      <td style={{ padding: '14px 12px', textAlign: 'center', width: 110 }}>
+        <span
+          className={
+            estadoStock === 'bajo'
+              ? 'stock-badge-bajo'
+              : estadoStock === 'medio'
+              ? 'stock-badge-medio'
+              : 'stock-badge-normal'
+          }
+          title={
+            estadoStock === 'bajo'
+              ? `Stock Bajo: ${insumo.stockActual} (Mín. Diario: ${insumo.stockMinimoDiario}, Mín. General: ${insumo.stockMinimo})`
+              : estadoStock === 'medio'
+              ? `Stock Medio: ${insumo.stockActual} (Mín. Diario: ${insumo.stockMinimoDiario}, Mín. General: ${insumo.stockMinimo})`
+              : `Stock Normal: ${insumo.stockActual}`
+          }
         >
-          {insumo.activo ? 'Desactivar' : 'Activar'}
-        </Button>
+          {insumo.stockActual}
+        </span>
+      </td>
+      <td style={{ padding: '14px 12px', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          Gen: <strong style={{ color: 'var(--brand-blue)' }}>{insumo.stockMinimo}</strong>
+          {' / '}
+          Día: <strong style={{ color: '#06b6d4' }}>{insumo.stockMinimoDiario}</strong>
+        </span>
+      </td>
+      {/* Columna Estado: SOLO ICONO activar/desactivar */}
+      <td style={{ padding: '14px 12px', width: 75 }}>
+        <button
+          type="button"
+          onClick={() => onCambiarActivo(insumo)}
+          title={insumo.activo ? 'Desactivar insumo (apagar)' : 'Activar insumo (encender)'}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            border: insumo.activo
+              ? '1px solid rgba(16, 185, 129, 0.35)'
+              : '1px solid rgba(239, 68, 68, 0.35)',
+            background: insumo.activo
+              ? 'rgba(16, 185, 129, 0.12)'
+              : 'rgba(239, 68, 68, 0.12)',
+            color: insumo.activo ? '#10b981' : '#ef4444',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <IconoPower />
+        </button>
+      </td>
+      {/* Columna Acciones: ICONO de editar */}
+      <td style={{ padding: '14px 12px', width: 75 }}>
+        <button
+          type="button"
+          title={`Editar insumo "${insumo.nombre}"`}
+          onClick={() => onEditar(insumo)}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 8,
+            border: '1px solid var(--input-border)',
+            background: 'var(--input-bg)',
+            color: 'var(--brand-blue)',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <IconoEditar />
+        </button>
       </td>
     </tr>
   )
 }
 
-export function InsumosTable({ insumos, onCambiarActivo, onActualizarStockMinimo }: InsumosTableProps) {
+export function InsumosTable({
+  insumos,
+  onCambiarActivo,
+  onActualizarStockMinimo,
+  onEditar,
+}: InsumosTableProps) {
   const { confirmar } = useConfirmacion()
 
   async function handleCambiarActivo(insumo: Insumo) {
@@ -160,10 +228,10 @@ export function InsumosTable({ insumos, onCambiarActivo, onActualizarStockMinimo
             <th style={{ padding: '10px 12px' }}>Nombre</th>
             <th style={{ padding: '10px 12px' }}>Tipo</th>
             <th style={{ padding: '10px 12px' }}>Unidad</th>
-            <th style={{ padding: '10px 12px' }}>Stock actual</th>
-            <th style={{ padding: '10px 12px' }}>Stock mínimo</th>
-            <th style={{ padding: '10px 12px' }}>Estado</th>
-            <th style={{ padding: '10px 12px' }}>Acciones</th>
+            <th style={{ padding: '10px 12px', textAlign: 'center', width: 110 }}>Stock actual</th>
+            <th style={{ padding: '10px 12px' }}>Gen / Día</th>
+            <th style={{ padding: '10px 12px', width: 75 }}>Estado</th>
+            <th style={{ padding: '10px 12px', width: 75 }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -173,6 +241,7 @@ export function InsumosTable({ insumos, onCambiarActivo, onActualizarStockMinimo
               insumo={insumo}
               onCambiarActivo={handleCambiarActivo}
               onActualizarStockMinimo={onActualizarStockMinimo}
+              onEditar={onEditar}
             />
           ))}
         </tbody>

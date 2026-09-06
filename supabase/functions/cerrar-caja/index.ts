@@ -255,10 +255,11 @@ Deno.serve(async (req: Request) => {
         throw new AppError(409, 'Este turno ya tiene un cierre registrado.')
       }
 
-      // 3) Tamaños de vaso activos vigentes: HU-04.4 CA-03 exige el conteo de
-      // TODOS, ni más ni menos.
+      // 3) Tamaños de vaso físicos activos vigentes: HU-04.4 CA-03 exige el conteo de
+      // TODOS los vasos físicos (tipo = 'vaso' con insumo asignado), ni más ni menos.
+      // Se excluyen las presentaciones en ml de bebidas (tipo = 'bebida').
       const tamanosActivosResult = await transaction.queryObject<TamanoVasoActivoRow>(
-        `select id, insumo_id from public.tamanos_vaso where activo = true`,
+        `select id, insumo_id from public.tamanos_vaso where activo = true and tipo = 'vaso' and insumo_id is not null`,
       )
       const tamanosActivos = tamanosActivosResult.rows
       const idsActivos = new Set(tamanosActivos.map((t) => t.id))
@@ -291,6 +292,7 @@ Deno.serve(async (req: Request) => {
         `select insumo_id, sum(cantidad) as teorico
          from public.movimientos_inventario
          where insumo_id in (${placeholders})
+           and tipo_movimiento in ('inventario_inicial', 'conteo_apertura', 'venta')
          group by insumo_id`,
         insumoIds,
       )

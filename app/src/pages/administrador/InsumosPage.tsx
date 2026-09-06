@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { InsumoForm } from '../../components/insumos/InsumoForm'
+import { InsumoEditarModal } from '../../components/insumos/InsumoEditarModal'
 import { InsumosTable } from '../../components/insumos/InsumosTable'
-import { InventarioInicialForm } from '../../components/insumos/InventarioInicialForm'
+import { ConteoInventarioDiarioForm } from '../../components/insumos/ConteoInventarioDiarioForm'
 import { useSession } from '../../hooks/useSession'
 import { insumosService } from '../../services/insumosService'
 import { movimientosInventarioService } from '../../services/movimientosInventarioService'
-import type { CrearInsumoInput, Insumo } from '../../types/insumo'
+import type { ActualizarInsumoInput, CrearInsumoInput, Insumo } from '../../types/insumo'
+import type { MovimientoInventario, RegistrarConteoInventarioInput } from '../../types/movimientoInventario'
 import { AppShell } from '../../components/layout/AppShell'
 import { GlassCard } from '../../components/ui/GlassCard'
 
@@ -15,15 +17,22 @@ import { GlassCard } from '../../components/ui/GlassCard'
 export function InsumosPage() {
   const { usuario } = useSession()
   const [insumos, setInsumos] = useState<Insumo[]>([])
+  const [conteosRecientes, setConteosRecientes] = useState<MovimientoInventario[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const [insumoAEditar, setInsumoAEditar] = useState<Insumo | null>(null)
 
   const cargarInsumos = useCallback(async () => {
     setCargando(true)
     setError(null)
     try {
-      const lista = await insumosService.listarInsumos()
-      setInsumos(lista)
+      const [listaInsumos, listaConteos] = await Promise.all([
+        insumosService.listarInsumos(),
+        movimientosInventarioService.listarConteosRecientes(30),
+      ])
+      setInsumos(listaInsumos)
+      setConteosRecientes(listaConteos)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar el listado de insumos.')
     } finally {
@@ -50,22 +59,20 @@ export function InsumosPage() {
     await cargarInsumos()
   }
 
-  async function handleRegistrarInventarioInicial(input: {
-    insumoId: string
-    cantidad: number
-    observaciones?: string
-  }) {
-    if (!usuario) throw new Error('Sesión no resuelta; recarga la página e intenta de nuevo.')
-    await movimientosInventarioService.registrarInventarioInicial({
-      insumoId: input.insumoId,
-      cantidad: input.cantidad,
-      usuarioId: usuario.usuarioId,
-      observaciones: input.observaciones,
-    })
+  async function handleGuardarEdicion(id: string, cambios: ActualizarInsumoInput) {
+    await insumosService.actualizarInsumo(id, cambios)
     await cargarInsumos()
   }
 
-  const insumosVaso = insumos.filter((insumo) => insumo.tipo === 'vaso' && insumo.activo)
+  async function handleRegistrarConteo(input: RegistrarConteoInventarioInput) {
+    if (!usuario) throw new Error('Sesión no resuelta; recarga la página e intenta de nuevo.')
+    await movimientosInventarioService.registrarConteoInventario(input)
+    await cargarInsumos()
+  }
+
+  const tiposPersonalizados = Array.from(
+    new Set(insumos.map((i) => i.tipo).filter((t) => Boolean(t) && t !== 'vaso' && t !== 'otro')),
+  )
 
   return (
     <AppShell rol="administrador">
@@ -75,11 +82,16 @@ export function InsumosPage() {
             Gestión de Insumos
           </h2>
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)' }}>
-            Administra los ingredientes, vasos y el conteo de inventario diario.
+            Administra los ingredientes, vasos y el conteo de inventario diario general.
           </p>
         </div>
 
-        <InsumoForm onCrear={handleCrear} />
+        <InsumoForm
+          tiposPersonalizados={tiposPersonalizados}
+          insumosExistentes={insumos}
+          onCrear={handleCrear}
+          onActualizar={handleGuardarEdicion}
+        />
 
         {error && (
           <GlassCard tint="red" padding={16}>
@@ -98,24 +110,35 @@ export function InsumosPage() {
               insumos={insumos}
               onCambiarActivo={handleCambiarActivo}
               onActualizarStockMinimo={handleActualizarStockMinimo}
+              onEditar={setInsumoAEditar}
             />
           )}
         </GlassCard>
 
-        <GlassCard tint="blue" padding={20}>
-          <div style={{ marginBottom: 14 }}>
+        <InsumoEditarModal
+          insumo={insumoAEditar}
+          tiposPersonalizados={tiposPersonalizados}
+          abierto={insumoAEditar !== null}
+          onCerrar={() => setInsumoAEditar(null)}
+          onGuardar={handleGuardarEdicion}
+        />
+
+        <GlassCard tint="blue" padding={22}>
+          <div style={{ marginBottom: 16 }}>
             <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--brand-blue)' }}>
-              Inventario Inicial de Vasos
+              Control Diario de Inventario General (Apertura y Cierre)
             </h3>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
-              Registra el conteo inicial de vasos por tamaño (una vez por insumo por día). El stock actual del insumo queda fijado al valor contado.
+              Registra el conteo físico de inventario general por insumo (vasos, bolsas, ingredientes) tanto al inicio (apertura) como al final (cierre) de la jornada. El stock actual queda actualizado al valor contado.
             </p>
           </div>
 
-          {!cargando && (
-            <InventarioInicialForm
-              insumosVaso={insumosVaso}
-              onRegistrar={handleRegistrarInventarioInicial}
+          {!cargando && usuario && (
+            <ConteoInventarioDiarioForm
+              insumos={insumos}
+              usuarioId={usuario.usuarioId}
+              conteosRecientes={conteosRecientes}
+              onRegistrar={handleRegistrarConteo}
             />
           )}
         </GlassCard>

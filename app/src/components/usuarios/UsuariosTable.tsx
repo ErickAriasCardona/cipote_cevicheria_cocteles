@@ -3,7 +3,6 @@ import type { Rol } from '../../types/auth'
 import type { UsuarioPerfil } from '../../types/usuario'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { Button } from '../ui/Button'
-import { StatusPill } from '../ui/StatusPill'
 
 interface UsuariosTableProps {
   usuarios: UsuarioPerfil[]
@@ -12,6 +11,7 @@ interface UsuariosTableProps {
   usuarioActualId: string | null
   onCambiarRol: (id: string, rol: Rol) => void
   onCambiarActivo: (id: string, activo: boolean) => void
+  onEliminar: (id: string, nombre: string) => Promise<void>
 }
 
 const ROLES: Rol[] = ['administrador', 'cajero']
@@ -21,14 +21,35 @@ const ETIQUETAS_ROL: Record<Rol, string> = {
   cajero: 'Cajero',
 }
 
+function IconoPower({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+      <line x1="12" y1="2" x2="12" y2="12" />
+    </svg>
+  )
+}
+
+function IconoTrash() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  )
+}
+
 interface FilaUsuarioProps {
   usuario: UsuarioPerfil
   esUsuarioActual: boolean
   onCambiarRol: UsuariosTableProps['onCambiarRol']
   onCambiarActivo: UsuariosTableProps['onCambiarActivo']
+  onEliminar: UsuariosTableProps['onEliminar']
 }
 
-function FilaUsuario({ usuario, esUsuarioActual, onCambiarRol, onCambiarActivo }: FilaUsuarioProps) {
+function FilaUsuario({ usuario, esUsuarioActual, onCambiarRol, onCambiarActivo, onEliminar }: FilaUsuarioProps) {
   const { confirmar } = useConfirmacion()
   const [rol, setRol] = useState<Rol>(usuario.rol)
 
@@ -48,21 +69,29 @@ function FilaUsuario({ usuario, esUsuarioActual, onCambiarRol, onCambiarActivo }
   }
 
   async function handleCambiarActivo() {
+    if (esUsuarioActual) return
     const siguienteActivo = !usuario.activo
-    let mensaje = siguienteActivo
-      ? `¿Confirmas activar a ${usuario.nombreCompleto}?`
-      : `¿Confirmas desactivar a ${usuario.nombreCompleto}?`
-    if (esUsuarioActual && !siguienteActivo) {
-      mensaje += ' Vas a desactivar tu propio usuario; perderás acceso de inmediato.'
-    }
     const ok = await confirmar({
       titulo: siguienteActivo ? 'Activar usuario' : 'Desactivar usuario',
-      mensaje,
+      mensaje: siguienteActivo
+        ? `¿Confirmas reactivar al usuario "${usuario.nombreCompleto}"? Podrá iniciar sesión nuevamente.`
+        : `¿Confirmas desactivar al usuario "${usuario.nombreCompleto}"? No podrá iniciar sesión en el sistema.`,
       textoConfirmar: siguienteActivo ? 'Activar' : 'Desactivar',
       varianteConfirmar: siguienteActivo ? 'activate' : 'destructive',
     })
     if (!ok) return
     onCambiarActivo(usuario.id, siguienteActivo)
+  }
+
+  async function handleEliminar() {
+    const ok = await confirmar({
+      titulo: 'Eliminar usuario',
+      mensaje: `¿Confirmas eliminar permanentemente al usuario "${usuario.nombreCompleto}"? Esta acción borrará sus credenciales de acceso. Si el usuario tiene registros históricos (ventas, turnos o gastos), el sistema protegerá la información contable.`,
+      textoConfirmar: 'Eliminar usuario',
+      varianteConfirmar: 'destructive',
+    })
+    if (!ok) return
+    await onEliminar(usuario.id, usuario.nombreCompleto)
   }
 
   return (
@@ -112,19 +141,68 @@ function FilaUsuario({ usuario, esUsuarioActual, onCambiarRol, onCambiarActivo }
         </div>
       </td>
       <td style={{ padding: '14px 12px' }}>
-        <StatusPill variant={usuario.activo ? 'positive' : 'destructive'}>
-          {usuario.activo ? 'Activo' : 'Inactivo'}
-        </StatusPill>
-      </td>
-      <td style={{ padding: '14px 12px' }}>
-        <Button
+        <button
           type="button"
-          variant={usuario.activo ? 'destructive' : 'activate'}
-          size="sm"
+          disabled={esUsuarioActual}
+          className={`btn-estado-toggle ${usuario.activo ? 'activo' : 'inactivo'}`}
           onClick={handleCambiarActivo}
+          title={
+            esUsuarioActual
+              ? 'No puedes cambiar el estado de tu propia cuenta de usuario'
+              : usuario.activo
+              ? `Desactivar usuario "${usuario.nombreCompleto}" (apagar)`
+              : `Activar usuario "${usuario.nombreCompleto}" (encender)`
+          }
         >
-          {usuario.activo ? 'Desactivar' : 'Activar'}
-        </Button>
+          <IconoPower size={13} />
+          <span>{usuario.activo ? 'Activo' : 'Inactivo'}</span>
+        </button>
+      </td>
+      <td style={{ padding: '14px 12px', width: 70 }}>
+        {/* Botón Eliminar (Trash) - Validado: no permitir eliminar al usuario actual */}
+        {esUsuarioActual ? (
+          <button
+            type="button"
+            disabled
+            title="No puedes eliminar tu propia cuenta de administrador"
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              border: '1px solid var(--border-soft)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              color: 'var(--text-faint)',
+              cursor: 'not-allowed',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0.35,
+            }}
+          >
+            <IconoTrash />
+          </button>
+        ) : (
+          <button
+            type="button"
+            title={`Eliminar usuario "${usuario.nombreCompleto}"`}
+            onClick={handleEliminar}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <IconoTrash />
+          </button>
+        )}
       </td>
     </tr>
   )
@@ -135,6 +213,7 @@ export function UsuariosTable({
   usuarioActualId,
   onCambiarRol,
   onCambiarActivo,
+  onEliminar,
 }: UsuariosTableProps) {
   if (usuarios.length === 0) {
     return (
@@ -160,8 +239,8 @@ export function UsuariosTable({
           >
             <th style={{ padding: '10px 12px' }}>Nombre</th>
             <th style={{ padding: '10px 12px' }}>Rol</th>
-            <th style={{ padding: '10px 12px' }}>Estado</th>
-            <th style={{ padding: '10px 12px' }}>Acciones</th>
+            <th style={{ padding: '10px 12px', width: 110 }}>Estado</th>
+            <th style={{ padding: '10px 12px', width: 70 }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -172,6 +251,7 @@ export function UsuariosTable({
               esUsuarioActual={usuario.id === usuarioActualId}
               onCambiarRol={onCambiarRol}
               onCambiarActivo={onCambiarActivo}
+              onEliminar={onEliminar}
             />
           ))}
         </tbody>
@@ -179,3 +259,4 @@ export function UsuariosTable({
     </div>
   )
 }
+

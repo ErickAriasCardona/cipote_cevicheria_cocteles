@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabaseClient'
-import type { ActualizarProductoInput, CrearProductoInput, Producto } from '../types/producto'
+import type { ActualizarProductoInput, CategoriaProducto, CrearProductoInput, Producto } from '../types/producto'
 
 /**
  * Servicio de gestión de productos (BD-02.2, RF-03.1).
@@ -19,7 +19,7 @@ import type { ActualizarProductoInput, CrearProductoInput, Producto } from '../t
 interface ProductoRow {
   id: string
   nombre: string
-  categoria: 'ceviche' | 'bebida' | 'otro'
+  categoria: CategoriaProducto
   descripcion: string | null
   precio: number | null
   precio_legado: number | null
@@ -85,5 +85,17 @@ export const productosService = {
       .single()
     if (error) throw error
     return mapRow(data as ProductoRow)
+  },
+
+  async eliminarProducto(id: string): Promise<void> {
+    const { error } = await supabase.from('productos').delete().eq('id', id)
+    if (error) {
+      if (error.code === '23503') {
+        throw new Error(
+          'No se puede eliminar este producto porque ya tiene ventas registradas en el histórico. Puedes apagarlo (desactivarlo) para que no esté disponible para la venta.',
+        )
+      }
+      throw error
+    }
   },
 }

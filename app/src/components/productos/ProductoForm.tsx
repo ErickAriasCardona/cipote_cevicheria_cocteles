@@ -27,8 +27,12 @@ export function ProductoForm({ tamanosVaso, onCrear }: ProductoFormProps) {
   const [error, setError] = useState<string | null>(null)
   const { confirmar } = useConfirmacion()
 
-  const tipoRequerido = categoria === 'bebida' ? 'bebida' : 'vaso'
-  const tamanosFiltradosPorTipo = tamanosVaso.filter((t) => t.tipo === tipoRequerido)
+  const tamanosFiltradosPorTipo = tamanosVaso.filter((t) => {
+    if (categoria === 'bebida') return t.tipo === 'bebida' || t.categoria === 'bebida'
+    if (categoria === 'granizado') return t.categoria === 'granizado'
+    if (categoria === 'ceviche') return t.categoria === 'ceviche' || (!t.categoria && t.tipo === 'vaso')
+    return false
+  })
   const tamanosDisponibles = tamanosFiltradosPorTipo.filter(
     (tamano) => !tamanos.some((fila) => fila.tamanoVasoId === tamano.id),
   )
@@ -41,8 +45,12 @@ export function ProductoForm({ tamanosVaso, onCrear }: ProductoFormProps) {
     setTamanos([])
     setPrecioBorrador('')
     setError(null)
-    const nuevoTipo = nuevaCategoria === 'bebida' ? 'bebida' : 'vaso'
-    const primeros = tamanosVaso.filter((t) => t.tipo === nuevoTipo)
+    const primeros = tamanosVaso.filter((t) => {
+      if (nuevaCategoria === 'bebida') return t.tipo === 'bebida' || t.categoria === 'bebida'
+      if (nuevaCategoria === 'granizado') return t.categoria === 'granizado'
+      if (nuevaCategoria === 'ceviche') return t.categoria === 'ceviche' || (!t.categoria && t.tipo === 'vaso')
+      return false
+    })
     setTamanoVasoId(primeros[0]?.id ?? '')
   }
 
@@ -137,7 +145,12 @@ export function ProductoForm({ tamanosVaso, onCrear }: ProductoFormProps) {
       setDescripcion('')
       setTamanos([])
       setPrecioBorrador('')
-      const primeros = tamanosVaso.filter((t) => t.tipo === tipoRequerido)
+      const primeros = tamanosVaso.filter((t) => {
+        if (categoria === 'bebida') return t.tipo === 'bebida' || t.categoria === 'bebida'
+        if (categoria === 'granizado') return t.categoria === 'granizado'
+        if (categoria === 'ceviche') return t.categoria === 'ceviche' || (!t.categoria && t.tipo === 'vaso')
+        return false
+      })
       setTamanoVasoId(primeros[0]?.id ?? '')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el producto.')
@@ -156,236 +169,281 @@ export function ProductoForm({ tamanosVaso, onCrear }: ProductoFormProps) {
   return (
     <GlassCard padding={22}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Nuevo Producto</h3>
+        <h3 style={{ margin: 0, fontSize: 16.5, fontWeight: 700 }}>Nuevo Producto</h3>
 
-        {/* Selector de Categoría */}
-        <div>
-          <label
-            style={{
-              display: 'block',
-              fontSize: 13,
-              fontWeight: 500,
-              color: 'var(--text-secondary)',
-              marginBottom: 8,
-            }}
-          >
-            Categoría del producto
-          </label>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Chip
-              active={categoria === 'ceviche'}
-              onClick={() => handleCambiarCategoria('ceviche')}
-            >
-              🐟 Ceviches y Cócteles (oz)
-            </Chip>
-            <Chip
-              active={categoria === 'bebida'}
-              onClick={() => handleCambiarCategoria('bebida')}
-            >
-              🥤 Bebidas (ml)
-            </Chip>
-            <Chip
-              active={categoria === 'otro'}
-              onClick={() => handleCambiarCategoria('otro')}
-            >
-              📦 Otros (precio directo)
-            </Chip>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-          <Input
-            label="Nombre del producto"
-            id="nombre"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder={
-              categoria === 'ceviche'
-                ? 'Ej: Ceviche de Camarón, Mixto...'
-                : categoria === 'bebida'
-                ? 'Ej: Limonada Natural, Cerveza...'
-                : 'Ej: Porción de Galletas, Empanada...'
-            }
-            required
-          />
-
-          <Input
-            label="Descripción (opcional)"
-            id="descripcion"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            placeholder="Breve descripción o detalle para caja"
-          />
-        </div>
-
-        {/* Sección condicional: Para categoría 'otro', solo precio directo */}
-        {categoria === 'otro' ? (
-          <div
-            style={{
-              background: 'var(--input-bg)',
-              border: '1px dashed var(--input-border)',
-              borderRadius: 12,
-              padding: 16,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Precio de Venta Directo
-            </span>
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-              Los productos en categoría "Otros" no usan vasos ni mililitros, se venden por unidad con este precio fijo.
-            </p>
-            <div style={{ width: 180, marginTop: 4 }}>
-              <Input
-                label="Precio ($)"
-                id="precio_directo"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={precioDirecto}
-                onChange={(e) => setPrecioDirecto(e.target.value)}
-                placeholder="0.00"
-                required
-              />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 20,
+            alignItems: 'stretch',
+          }}
+        >
+          {/* COLUMNA 1: Categoría, Nombre y Descripción */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Categoría del producto */}
+            <div>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: 'var(--text-secondary)',
+                  marginBottom: 8,
+                }}
+              >
+                Categoría del producto
+              </label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Chip
+                  active={categoria === 'ceviche'}
+                  onClick={() => handleCambiarCategoria('ceviche')}
+                >
+                  Ceviches y Cócteles (oz)
+                </Chip>
+                <Chip
+                  active={categoria === 'granizado'}
+                  onClick={() => handleCambiarCategoria('granizado')}
+                >
+                  Granizados (oz)
+                </Chip>
+                <Chip
+                  active={categoria === 'bebida'}
+                  onClick={() => handleCambiarCategoria('bebida')}
+                >
+                  Bebidas (ml)
+                </Chip>
+                <Chip
+                  active={categoria === 'otro'}
+                  onClick={() => handleCambiarCategoria('otro')}
+                >
+                  Otros (precio directo)
+                </Chip>
+              </div>
             </div>
+
+            {/* Nombre del producto */}
+            <Input
+              label="Nombre del producto"
+              id="nombre"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder={
+                categoria === 'ceviche'
+                  ? 'Ej: Ceviche de Camarón, Mixto...'
+                  : categoria === 'granizado'
+                  ? 'Ej: Granizado de Café, Limón, Maracuyá...'
+                  : categoria === 'bebida'
+                  ? 'Ej: Limonada Natural, Cerveza...'
+                  : 'Ej: Porción de Galletas, Empanada...'
+              }
+              required
+            />
+
+            {/* Descripción (opcional) */}
+            <Input
+              label="Descripción (opcional)"
+              id="descripcion"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder="Breve descripción o detalle para caja"
+            />
           </div>
-        ) : (
-          /* Sección condicional: Para 'ceviche' o 'bebida', tamaños / presentaciones */
+
+          {/* COLUMNA 2: Tamaños de Vaso y Precios + Botón Crear Producto */}
           <div
             style={{
               background: 'var(--input-bg)',
               border: '1px dashed var(--input-border)',
-              borderRadius: 12,
+              borderRadius: 14,
               padding: 16,
               display: 'flex',
               flexDirection: 'column',
               gap: 12,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
-                {categoria === 'bebida'
-                  ? 'Presentaciones y Precios (Mililitros)'
-                  : 'Tamaños de Vaso y Precios (Onzas)'}
-              </span>
-              <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
-                {tamanos.length} configurado(s)
-              </span>
-            </div>
-
-            {tamanos.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                {categoria === 'bebida'
-                  ? 'Agrega las presentaciones en mililitros disponibles para esta bebida.'
-                  : 'Agrega los tamaños de vaso disponibles para este ceviche o cóctel.'}
-              </p>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {tamanos.map((fila) => (
-                  <div
-                    key={fila.tamanoVasoId}
+            {categoria === 'otro' ? (
+              <>
+                <div>
+                  <span
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '6px 10px',
-                      background: 'var(--glass-card-bg)',
-                      border: '1px solid var(--border-soft)',
-                      borderRadius: 8,
-                      fontSize: 12.5,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: 'var(--text-primary)',
+                      display: 'block',
+                      marginBottom: 4,
                     }}
                   >
-                    <span style={{ fontWeight: 600 }}>{etiquetaTamano(fila.tamanoVasoId)}</span>
-                    <span style={{ color: 'var(--brand-red)', fontWeight: 700 }}>
-                      ${fila.precio.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleQuitarTamano(fila.tamanoVasoId)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'var(--brand-red)',
-                        fontWeight: 700,
-                        padding: '0 2px',
-                      }}
-                      title="Quitar presentación"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                    Precio de Venta Directo
+                  </span>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                    Los productos en categoría "Otros" no usan vasos ni mililitros, se venden por unidad con este precio fijo.
+                  </p>
+                </div>
 
-            {tamanosDisponibles.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 12, color: 'var(--brand-green)', fontWeight: 600 }}>
-                ✓ Ya agregaste todas las presentaciones disponibles de esta categoría.
-              </p>
+                <Input
+                  label="Precio unitario ($)"
+                  id="precio_directo"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={precioDirecto}
+                  onChange={(e) => setPrecioDirecto(e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+              </>
             ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 10,
-                  alignItems: 'flex-end',
-                  flexWrap: 'wrap',
-                  paddingTop: 8,
-                  borderTop: '1px solid var(--hr-line)',
-                }}
-              >
-                <div style={{ flex: '1 1 180px' }}>
-                  <Select
-                    label={categoria === 'bebida' ? 'Presentación (ml)' : 'Tamaño de vaso (oz)'}
-                    id="tamano_vaso_id"
-                    value={tamanoVasoId || tamanosDisponibles[0]?.id || ''}
-                    onChange={(e) => setTamanoVasoId(e.target.value)}
-                    options={tamanosDisponibles.map((tamano) => ({
-                      value: tamano.id,
-                      label: tamano.etiqueta,
-                    }))}
-                  />
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    {categoria === 'bebida'
+                      ? 'Presentaciones y Precios (Mililitros)'
+                      : categoria === 'granizado'
+                      ? 'Tamaños de Vaso y Precios (Granizados)'
+                      : 'Tamaños de Vaso y Precios (Onzas)'}
+                  </span>
+                  <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
+                    {tamanos.length} configurado(s)
+                  </span>
                 </div>
 
-                <div style={{ width: 130 }}>
-                  <Input
-                    label="Precio ($)"
-                    id="precio_borrador"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={precioBorrador}
-                    onChange={(e) => setPrecioBorrador(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </div>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {categoria === 'bebida'
+                    ? 'Agrega las presentaciones en mililitros disponibles para esta bebida.'
+                    : categoria === 'granizado'
+                    ? 'Agrega los tamaños de vaso disponibles para este granizado.'
+                    : 'Agrega los tamaños de vaso disponibles para este ceviche o cóctel.'}
+                </p>
 
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="md"
-                  onClick={handleAgregarTamano}
-                  disabled={!precioBorrador}
-                >
-                  + Agregar
-                </Button>
-              </div>
+                {tamanosDisponibles.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--brand-green)', fontWeight: 600 }}>
+                    ✓ Ya agregaste todas las presentaciones disponibles de esta categoría.
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 10,
+                      alignItems: 'flex-end',
+                      flexWrap: 'wrap',
+                      paddingBottom: 4,
+                    }}
+                  >
+                    <div style={{ flex: '1 1 120px' }}>
+                      <Select
+                        label={
+                          categoria === 'bebida'
+                            ? 'Presentación (ml)'
+                            : categoria === 'granizado'
+                            ? 'Tamaño granizado (oz)'
+                            : 'Tamaño de vaso (oz)'
+                        }
+                        id="tamano_vaso_id"
+                        value={tamanoVasoId || tamanosDisponibles[0]?.id || ''}
+                        onChange={(e) => setTamanoVasoId(e.target.value)}
+                        options={tamanosDisponibles.map((tamano) => ({
+                          value: tamano.id,
+                          label: tamano.etiqueta,
+                        }))}
+                      />
+                    </div>
+
+                    <div style={{ width: 100 }}>
+                      <Input
+                        label="Precio ($)"
+                        id="precio_borrador"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={precioBorrador}
+                        onChange={(e) => setPrecioBorrador(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="md"
+                      onClick={handleAgregarTamano}
+                      disabled={!precioBorrador}
+                      style={{ height: 42, borderRadius: 10 }}
+                    >
+                      + Agregar
+                    </Button>
+                  </div>
+                )}
+
+                {/* Listado de tamaños agregados */}
+                {tamanos.length > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 8,
+                      paddingTop: 8,
+                      borderTop: '1px solid var(--hr-line)',
+                    }}
+                  >
+                    {tamanos.map((fila) => (
+                      <div
+                        key={fila.tamanoVasoId}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          padding: '5px 10px',
+                          background: 'var(--glass-card-bg)',
+                          border: '1px solid var(--border-soft)',
+                          borderRadius: 8,
+                          fontSize: 12,
+                        }}
+                      >
+                        <span style={{ fontWeight: 600 }}>{etiquetaTamano(fila.tamanoVasoId)}</span>
+                        <span style={{ color: 'var(--brand-red)', fontWeight: 700 }}>
+                          ${fila.precio.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleQuitarTamano(fila.tamanoVasoId)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: 'var(--brand-red)',
+                            fontWeight: 700,
+                            padding: '0 2px',
+                            fontSize: 13,
+                          }}
+                          title="Quitar presentación"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
+
+            {error && (
+              <p role="alert" style={{ margin: 0, color: 'var(--brand-red)', fontSize: 12.5, fontWeight: 600 }}>
+                {error}
+              </p>
+            )}
+
+            {/* Botón Crear Producto en Columna 2 */}
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={botonDeshabilitado}
+              style={{ width: '100%', marginTop: 'auto', height: 42, borderRadius: 10 }}
+            >
+              {enviando ? 'Creando…' : 'Crear Producto'}
+            </Button>
           </div>
-        )}
-
-        {error && (
-          <p role="alert" style={{ margin: 0, color: 'var(--brand-red)', fontSize: 13, fontWeight: 600 }}>
-            {error}
-          </p>
-        )}
-
-        <div>
-          <Button type="submit" variant="primary" size="md" disabled={botonDeshabilitado}>
-            {enviando ? 'Creando…' : 'Crear Producto'}
-          </Button>
         </div>
       </form>
     </GlassCard>

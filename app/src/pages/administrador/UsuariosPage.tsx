@@ -47,8 +47,27 @@ export function UsuariosPage() {
   }
 
   async function handleCambiarActivo(id: string, activo: boolean) {
-    await usuariosService.actualizarUsuario(id, { activo })
-    await cargarUsuarios()
+    if (id === usuarioSesion?.usuarioId) {
+      setError('No puedes cambiar el estado de tu propia cuenta de usuario.')
+      return
+    }
+    setError(null)
+    try {
+      await usuariosService.actualizarUsuario(id, { activo })
+      await cargarUsuarios()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar el estado del usuario.')
+    }
+  }
+
+  async function handleEliminarUsuario(id: string) {
+    setError(null)
+    try {
+      await usuariosService.eliminarUsuario(id)
+      await cargarUsuarios()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo eliminar el usuario.')
+    }
   }
 
   return (
@@ -85,6 +104,7 @@ export function UsuariosPage() {
               usuarioActualId={usuarioSesion?.usuarioId ?? null}
               onCambiarRol={handleCambiarRol}
               onCambiarActivo={handleCambiarActivo}
+              onEliminar={handleEliminarUsuario}
             />
           )}
         </GlassCard>
