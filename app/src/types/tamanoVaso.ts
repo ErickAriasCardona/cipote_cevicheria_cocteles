@@ -7,11 +7,15 @@
  * fila de `tamanos_vaso` en sí. El POS de ventas (BD-04.3) sí necesita listar
  * tamaños de vaso vendibles directamente.
  */
+export type TipoTamanoVaso = 'vaso' | 'bebida'
+
 export interface TamanoVaso {
   id: string
   etiqueta: string
-  onzas: number
-  insumoId: string
+  tipo: TipoTamanoVaso
+  onzas: number | null
+  mililitros: number | null
+  insumoId: string | null
   activo: boolean
   createdAt: string
 }

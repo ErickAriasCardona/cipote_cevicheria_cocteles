@@ -20,6 +20,7 @@ export function InsumoForm({ onCrear }: InsumoFormProps) {
   const [nombre, setNombre] = useState('')
   const [tipo, setTipo] = useState<TipoInsumo>('otro')
   const [unidadMedida, setUnidadMedida] = useState('unidad')
+  const [stockMinimo, setStockMinimo] = useState('0')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { confirmar } = useConfirmacion()
@@ -27,18 +28,20 @@ export function InsumoForm({ onCrear }: InsumoFormProps) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+    const stockMinimoNum = Math.max(0, Number(stockMinimo) || 0)
     const ok = await confirmar({
       titulo: 'Crear insumo',
-      mensaje: `¿Confirmas crear el insumo "${nombre}" (${tipo === 'vaso' ? 'Vaso' : 'Otro'}, unidad: ${unidadMedida})?`,
+      mensaje: `¿Confirmas crear el insumo "${nombre}" (${tipo === 'vaso' ? 'Vaso' : 'Otro'}, unidad: ${unidadMedida}, stock mín: ${stockMinimoNum})?`,
       textoConfirmar: 'Crear insumo',
     })
     if (!ok) return
     setEnviando(true)
     try {
-      await onCrear({ nombre, tipo, unidadMedida })
+      await onCrear({ nombre, tipo, unidadMedida, stockMinimo: stockMinimoNum })
       setNombre('')
       setTipo('otro')
       setUnidadMedida('unidad')
+      setStockMinimo('0')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear el insumo.')
     } finally {
@@ -76,6 +79,17 @@ export function InsumoForm({ onCrear }: InsumoFormProps) {
             onChange={(e) => setUnidadMedida(e.target.value)}
             placeholder="unidad, gramo, kg..."
             required
+          />
+
+          <Input
+            label="Stock mínimo"
+            id="stock_minimo"
+            type="number"
+            min="0"
+            step="0.01"
+            value={stockMinimo}
+            onChange={(e) => setStockMinimo(e.target.value)}
+            placeholder="0"
           />
         </div>
 

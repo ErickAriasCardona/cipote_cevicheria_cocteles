@@ -16,7 +16,7 @@ export interface Venta {
   turnoId: string
   cajeroId: string
   productoId: string
-  tamanoVasoId: string
+  tamanoVasoId: string | null
   cantidad: number
   precioUnitario: number
   total: number
@@ -31,7 +31,7 @@ export interface Venta {
  * por el Cajero ni confiados del cliente (mismo criterio que `AbrirCajaInput`). */
 export interface RegistrarVentaInput {
   productoId: string
-  tamanoVasoId: string
+  tamanoVasoId?: string | null
   cantidad: number
   tipoEntrega: TipoEntrega
   observaciones?: string

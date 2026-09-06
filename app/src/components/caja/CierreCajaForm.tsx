@@ -205,7 +205,7 @@ export function CierreCajaForm({ tamanosVaso, transferencias = [], onCerrar }: C
                 {tamanosVaso.map((tamano) => (
                   <tr key={tamano.id} style={{ borderBottom: '1px solid var(--hr-line)' }}>
                     <td style={{ padding: '10px 14px', fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      {tamano.etiqueta} ({tamano.onzas} oz)
+                      {tamano.etiqueta}
                     </td>
                     <td style={{ padding: '8px 14px', textAlign: 'right' }}>
                       <input

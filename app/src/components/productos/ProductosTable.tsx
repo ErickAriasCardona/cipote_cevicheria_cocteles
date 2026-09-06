@@ -19,8 +19,21 @@ interface FilaProductoProps {
   onCambiarActivo: ProductosTableProps['onCambiarActivo']
 }
 
+function etiquetaCategoria(categoria: Producto['categoria']): { texto: string; color: string; bg: string } {
+  switch (categoria) {
+    case 'ceviche':
+      return { texto: '🐟 Ceviche/Cóctel', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.12)' }
+    case 'bebida':
+      return { texto: '🥤 Bebida', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.12)' }
+    case 'otro':
+    default:
+      return { texto: '📦 Otro', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' }
+  }
+}
+
 function FilaProducto({ producto, tamanosActivos, seleccionado, onSeleccionar, onCambiarActivo }: FilaProductoProps) {
   const { confirmar } = useConfirmacion()
+  const catInfo = etiquetaCategoria(producto.categoria)
 
   async function handleCambiarActivo() {
     const siguienteActivo = !producto.activo
@@ -44,20 +57,45 @@ function FilaProducto({ producto, tamanosActivos, seleccionado, onSeleccionar, o
         transition: 'background 0.2s ease',
       }}
     >
-      <td style={{ padding: '14px 12px', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-        {producto.nombre}
-      </td>
-      <td style={{ padding: '14px 12px', fontSize: 12.5, color: 'var(--text-secondary)' }}>
-        {producto.precioLegado !== null
-          ? `$${producto.precioLegado.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`
-          : '—'}
+      <td style={{ padding: '14px 12px' }}>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
+          {producto.nombre}
+        </div>
+        {producto.descripcion && (
+          <div style={{ fontSize: 11.5, color: 'var(--text-secondary)', marginTop: 2 }}>
+            {producto.descripcion}
+          </div>
+        )}
       </td>
       <td style={{ padding: '14px 12px' }}>
-        <StatusPill variant={tamanosActivos > 0 ? 'positive' : 'neutral'}>
-          {tamanosActivos > 0
-            ? `${tamanosActivos} tamaño(s)`
-            : 'Sin tamaños'}
-        </StatusPill>
+        <span
+          style={{
+            fontSize: 11.5,
+            fontWeight: 700,
+            padding: '3px 8px',
+            borderRadius: 6,
+            color: catInfo.color,
+            backgroundColor: catInfo.bg,
+            display: 'inline-block',
+          }}
+        >
+          {catInfo.texto}
+        </span>
+      </td>
+      <td style={{ padding: '14px 12px', fontSize: 13, color: 'var(--text-primary)' }}>
+        {producto.categoria === 'otro' ? (
+          <strong style={{ color: 'var(--brand-green)', fontSize: 13.5 }}>
+            {producto.precio !== null
+              ? `$${producto.precio.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`
+              : '—'}
+          </strong>
+        ) : (
+          <StatusPill variant={tamanosActivos > 0 ? 'positive' : 'neutral'}>
+            {tamanosActivos > 0
+              ? `${tamanosActivos} presentación(es)`
+              : 'Sin tamaños'}
+          </StatusPill>
+        )}
       </td>
       <td style={{ padding: '14px 12px' }}>
         <StatusPill variant={producto.activo ? 'positive' : 'destructive'}>
@@ -72,7 +110,13 @@ function FilaProducto({ producto, tamanosActivos, seleccionado, onSeleccionar, o
             size="sm"
             onClick={() => onSeleccionar(producto.id)}
           >
-            {seleccionado ? '✓ Gestionando' : 'Gestionar tamaños y precios'}
+            {producto.categoria === 'otro'
+              ? seleccionado
+                ? '✓ Seleccionado'
+                : 'Ver detalles'
+              : seleccionado
+              ? '✓ Gestionando'
+              : 'Gestionar tamaños y precios'}
           </Button>
           <Button
             type="button"
@@ -118,8 +162,8 @@ export function ProductosTable({
             }}
           >
             <th style={{ padding: '10px 12px' }}>Nombre</th>
-            <th style={{ padding: '10px 12px' }}>Ref. anterior</th>
-            <th style={{ padding: '10px 12px' }}>Tamaños</th>
+            <th style={{ padding: '10px 12px' }}>Categoría</th>
+            <th style={{ padding: '10px 12px' }}>Precio / Tamaños</th>
             <th style={{ padding: '10px 12px' }}>Estado</th>
             <th style={{ padding: '10px 12px' }}>Acciones</th>
           </tr>

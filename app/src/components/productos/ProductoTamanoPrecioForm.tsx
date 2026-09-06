@@ -79,13 +79,13 @@ export function ProductoTamanoPrecioForm({
     >
       <div style={{ flex: '1 1 200px' }}>
         <Select
-          label="Agregar otro tamaño"
+          label="Agregar tamaño / presentación"
           id="ptp_tamano_vaso_id"
           value={tamanoVasoId}
           onChange={(e) => setTamanoVasoId(e.target.value)}
           options={tamanosDisponibles.map((tamano) => ({
             value: tamano.id,
-            label: `${tamano.etiqueta} (${tamano.onzas} oz)`,
+            label: tamano.etiqueta,
           }))}
         />
       </div>

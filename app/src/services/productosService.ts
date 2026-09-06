@@ -19,16 +19,24 @@ import type { ActualizarProductoInput, CrearProductoInput, Producto } from '../t
 interface ProductoRow {
   id: string
   nombre: string
+  categoria: 'ceviche' | 'bebida' | 'otro'
+  descripcion: string | null
+  precio: number | null
   precio_legado: number | null
   activo: boolean
   created_at: string
   updated_at: string
 }
 
+const COLUMNAS = 'id, nombre, categoria, descripcion, precio, precio_legado, activo, created_at, updated_at'
+
 function mapRow(row: ProductoRow): Producto {
   return {
     id: row.id,
     nombre: row.nombre,
+    categoria: row.categoria,
+    descripcion: row.descripcion,
+    precio: row.precio,
     precioLegado: row.precio_legado,
     activo: row.activo,
     createdAt: row.created_at,
@@ -40,7 +48,7 @@ export const productosService = {
   async listarProductos(): Promise<Producto[]> {
     const { data, error } = await supabase
       .from('productos')
-      .select('id, nombre, precio_legado, activo, created_at, updated_at')
+      .select(COLUMNAS)
       .order('nombre', { ascending: true })
     if (error) throw error
     return (data as ProductoRow[]).map(mapRow)
@@ -49,8 +57,13 @@ export const productosService = {
   async crearProducto(input: CrearProductoInput): Promise<Producto> {
     const { data, error } = await supabase
       .from('productos')
-      .insert({ nombre: input.nombre })
-      .select('id, nombre, precio_legado, activo, created_at, updated_at')
+      .insert({
+        nombre: input.nombre,
+        categoria: input.categoria,
+        descripcion: input.descripcion ?? null,
+        precio: input.precio ?? null,
+      })
+      .select(COLUMNAS)
       .single()
     if (error) throw error
     return mapRow(data as ProductoRow)
@@ -59,13 +72,16 @@ export const productosService = {
   async actualizarProducto(id: string, cambios: ActualizarProductoInput): Promise<Producto> {
     const payload: Partial<ProductoRow> = {}
     if (cambios.nombre !== undefined) payload.nombre = cambios.nombre
+    if (cambios.categoria !== undefined) payload.categoria = cambios.categoria
+    if (cambios.descripcion !== undefined) payload.descripcion = cambios.descripcion
+    if (cambios.precio !== undefined) payload.precio = cambios.precio
     if (cambios.activo !== undefined) payload.activo = cambios.activo
 
     const { data, error } = await supabase
       .from('productos')
       .update(payload)
       .eq('id', id)
-      .select('id, nombre, precio_legado, activo, created_at, updated_at')
+      .select(COLUMNAS)
       .single()
     if (error) throw error
     return mapRow(data as ProductoRow)

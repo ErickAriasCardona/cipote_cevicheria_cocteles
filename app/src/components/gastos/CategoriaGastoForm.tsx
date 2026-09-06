@@ -47,18 +47,29 @@ export function CategoriaGastoForm({ onCrear }: CategoriaGastoFormProps) {
         marginBottom: 16,
       }}
     >
-      <div style={{ flex: '1 1 240px' }}>
+      <div style={{ flex: '1 1 280px' }}>
         <Input
           label="Nombre de la categoría"
           id="nombre_categoria_gasto"
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Compra, Servicio, Nómina, Arriendo…"
+          containerStyle={{ marginBottom: 0 }}
           required
         />
       </div>
 
-      <Button type="submit" variant="primary" size="md" disabled={enviando || !nombre.trim()}>
+      <Button
+        type="submit"
+        variant="primary"
+        size="md"
+        disabled={enviando || !nombre.trim()}
+        style={{
+          height: 44,
+          borderRadius: 12,
+          whiteSpace: 'nowrap',
+        }}
+      >
         {enviando ? 'Creando…' : '+ Crear categoría'}
       </Button>
 

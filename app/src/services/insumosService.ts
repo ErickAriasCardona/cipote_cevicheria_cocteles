@@ -17,10 +17,13 @@ interface InsumoRow {
   tipo: 'vaso' | 'otro'
   unidad_medida: string
   stock_actual: number
+  stock_minimo: number
   activo: boolean
   created_at: string
   updated_at: string
 }
+
+const COLUMNAS = 'id, nombre, tipo, unidad_medida, stock_actual, stock_minimo, activo, created_at, updated_at'
 
 function mapRow(row: InsumoRow): Insumo {
   return {
@@ -29,6 +32,7 @@ function mapRow(row: InsumoRow): Insumo {
     tipo: row.tipo,
     unidadMedida: row.unidad_medida,
     stockActual: row.stock_actual,
+    stockMinimo: row.stock_minimo ?? 0,
     activo: row.activo,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -39,7 +43,7 @@ export const insumosService = {
   async listarInsumos(): Promise<Insumo[]> {
     const { data, error } = await supabase
       .from('insumos')
-      .select('id, nombre, tipo, unidad_medida, stock_actual, activo, created_at, updated_at')
+      .select(COLUMNAS)
       .order('nombre', { ascending: true })
     if (error) throw error
     return (data as InsumoRow[]).map(mapRow)
@@ -52,8 +56,9 @@ export const insumosService = {
         nombre: input.nombre,
         tipo: input.tipo ?? 'otro',
         unidad_medida: input.unidadMedida ?? 'unidad',
+        stock_minimo: input.stockMinimo ?? 0,
       })
-      .select('id, nombre, tipo, unidad_medida, stock_actual, activo, created_at, updated_at')
+      .select(COLUMNAS)
       .single()
     if (error) throw error
     return mapRow(data as InsumoRow)
@@ -64,13 +69,14 @@ export const insumosService = {
     if (cambios.nombre !== undefined) payload.nombre = cambios.nombre
     if (cambios.tipo !== undefined) payload.tipo = cambios.tipo
     if (cambios.unidadMedida !== undefined) payload.unidad_medida = cambios.unidadMedida
+    if (cambios.stockMinimo !== undefined) payload.stock_minimo = cambios.stockMinimo
     if (cambios.activo !== undefined) payload.activo = cambios.activo
 
     const { data, error } = await supabase
       .from('insumos')
       .update(payload)
       .eq('id', id)
-      .select('id, nombre, tipo, unidad_medida, stock_actual, activo, created_at, updated_at')
+      .select(COLUMNAS)
       .single()
     if (error) throw error
     return mapRow(data as InsumoRow)

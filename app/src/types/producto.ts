@@ -8,28 +8,34 @@
  * física se renombró a `precio_legado` (migración
  * `20260905000001_producto_tamano_precio.sql`).
  */
+export type CategoriaProducto = 'ceviche' | 'bebida' | 'otro'
+
 export interface Producto {
   id: string
   nombre: string
-  /** Precio único que tenía el producto antes de esta corrección. Ya no es
-   * el precio de venta (esa lógica vive en `producto_tamano_precio`): se
-   * conserva solo como referencia visual para que el Administrador sepa
-   * cuánto cobraba antes al reconfigurar el producto por tamaño. */
+  categoria: CategoriaProducto
+  descripcion: string | null
+  precio: number | null
+  /** Precio único que tenía el producto antes de la corrección de tamaños. */
   precioLegado: number | null
   activo: boolean
   createdAt: string
   updatedAt: string
 }
 
-/** Payload para dar de alta un producto (HU-03.1). Ya no incluye `precio`:
- * el precio se agrega por tamaño, vía `producto_tamano_precio`, en la misma
- * acción de "Guardar producto" (ver `ProductoForm.tsx`). */
+/** Payload para dar de alta un producto (HU-03.1). */
 export interface CrearProductoInput {
   nombre: string
+  categoria: CategoriaProducto
+  descripcion?: string | null
+  precio?: number | null
 }
 
 /** Cambios permitidos sobre un producto ya existente. */
 export interface ActualizarProductoInput {
   nombre?: string
+  categoria?: CategoriaProducto
+  descripcion?: string | null
+  precio?: number | null
   activo?: boolean
 }

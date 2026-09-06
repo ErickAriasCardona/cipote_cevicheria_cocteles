@@ -14,7 +14,7 @@ interface ProductoTamanoPrecioTableProps {
 
 function etiquetaTamano(tamanosVaso: TamanoVaso[], tamanoVasoId: string): string {
   const tamano = tamanosVaso.find((t) => t.id === tamanoVasoId)
-  return tamano ? `${tamano.etiqueta} (${tamano.onzas} oz)` : tamanoVasoId
+  return tamano ? tamano.etiqueta : tamanoVasoId
 }
 
 interface FilaProps {
@@ -140,7 +140,7 @@ export function ProductoTamanoPrecioTable({
               color: 'var(--text-faint)',
             }}
           >
-            <th style={{ padding: '8px 10px' }}>Tamaño de vaso</th>
+            <th style={{ padding: '8px 10px' }}>Tamaño / Presentación</th>
             <th style={{ padding: '8px 10px' }}>Precio</th>
             <th style={{ padding: '8px 10px' }}>Estado</th>
             <th style={{ padding: '8px 10px' }}>Acciones</th>

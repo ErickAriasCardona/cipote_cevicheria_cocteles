@@ -45,6 +45,11 @@ export function InsumosPage() {
     await cargarInsumos()
   }
 
+  async function handleActualizarStockMinimo(id: string, stockMinimo: number) {
+    await insumosService.actualizarInsumo(id, { stockMinimo })
+    await cargarInsumos()
+  }
+
   async function handleRegistrarInventarioInicial(input: {
     insumoId: string
     cantidad: number
@@ -89,7 +94,11 @@ export function InsumosPage() {
           {cargando ? (
             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 13.5 }}>Cargando insumos…</p>
           ) : (
-            <InsumosTable insumos={insumos} onCambiarActivo={handleCambiarActivo} />
+            <InsumosTable
+              insumos={insumos}
+              onCambiarActivo={handleCambiarActivo}
+              onActualizarStockMinimo={handleActualizarStockMinimo}
+            />
           )}
         </GlassCard>
 

@@ -10,6 +10,7 @@ export interface Insumo {
   tipo: TipoInsumo
   unidadMedida: string
   stockActual: number
+  stockMinimo: number
   activo: boolean
   createdAt: string
   updatedAt: string
@@ -21,6 +22,7 @@ export interface CrearInsumoInput {
   nombre: string
   tipo?: TipoInsumo
   unidadMedida?: string
+  stockMinimo?: number
 }
 
 /** Cambios permitidos sobre un insumo ya existente (nunca stockActual directo). */
@@ -28,5 +30,6 @@ export interface ActualizarInsumoInput {
   nombre?: string
   tipo?: TipoInsumo
   unidadMedida?: string
+  stockMinimo?: number
   activo?: boolean
 }

@@ -65,24 +65,26 @@ export function ProductosPage() {
     [precios, productoSeleccionadoId],
   )
 
-  const tamanosDisponiblesParaAgregar = useMemo(
-    () =>
-      tamanosVaso.filter(
-        (tamano) => !filasProductoSeleccionado.some((fila) => fila.tamanoVasoId === tamano.id),
-      ),
-    [tamanosVaso, filasProductoSeleccionado],
-  )
-
   const productoSeleccionado = productos.find((p) => p.id === productoSeleccionadoId)
+
+  const tamanosDisponiblesParaAgregar = useMemo(() => {
+    if (!productoSeleccionado || productoSeleccionado.categoria === 'otro') return []
+    const tipoRequerido = productoSeleccionado.categoria === 'bebida' ? 'bebida' : 'vaso'
+    return tamanosVaso
+      .filter((t) => t.tipo === tipoRequerido)
+      .filter((tamano) => !filasProductoSeleccionado.some((fila) => fila.tamanoVasoId === tamano.id))
+  }, [productoSeleccionado, tamanosVaso, filasProductoSeleccionado])
 
   async function handleCrear(input: CrearProductoInput, tamanos: NuevoTamanoPrecioInput[]) {
     const nuevo = await productosService.crearProducto(input)
-    for (const tamano of tamanos) {
-      await productoTamanoPrecioService.crear({
-        productoId: nuevo.id,
-        tamanoVasoId: tamano.tamanoVasoId,
-        precio: tamano.precio,
-      })
+    if (input.categoria !== 'otro') {
+      for (const tamano of tamanos) {
+        await productoTamanoPrecioService.crear({
+          productoId: nuevo.id,
+          tamanoVasoId: tamano.tamanoVasoId,
+          precio: tamano.precio,
+        })
+      }
     }
     setProductoSeleccionadoId(nuevo.id)
     await cargarDatos()
@@ -110,6 +112,15 @@ export function ProductosPage() {
     await cargarDatos()
   }
 
+  async function handleActualizarOtro(precio: number, descripcion: string) {
+    if (!productoSeleccionadoId) return
+    await productosService.actualizarProducto(productoSeleccionadoId, {
+      precio,
+      descripcion: descripcion.trim() || null,
+    })
+    await cargarDatos()
+  }
+
   return (
     <AppShell rol="administrador">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -118,7 +129,7 @@ export function ProductosPage() {
             Gestión de Productos
           </h2>
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--text-secondary)' }}>
-            Configura el catálogo de cócteles y ceviches, junto con sus precios por tamaño.
+            Configura el catálogo de ceviches, bebidas y otros productos, junto con sus precios y presentaciones.
           </p>
         </div>
 
@@ -149,14 +160,24 @@ export function ProductosPage() {
               />
             </GlassCard>
 
-            {productoSeleccionado && (
+            {productoSeleccionado && productoSeleccionado.categoria === 'otro' ? (
+              <DetalleProductoOtro
+                key={productoSeleccionado.id}
+                producto={productoSeleccionado}
+                onGuardar={handleActualizarOtro}
+              />
+            ) : productoSeleccionado ? (
               <GlassCard tint="blue" padding={20}>
                 <div style={{ marginBottom: 16 }}>
                   <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: 'var(--brand-blue)' }}>
-                    Tamaños y Precios de "{productoSeleccionado.nombre}"
+                    {productoSeleccionado.categoria === 'bebida'
+                      ? `Presentaciones y Precios de "${productoSeleccionado.nombre}"`
+                      : `Tamaños y Precios de "${productoSeleccionado.nombre}"`}
                   </h3>
                   <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                    Configura los precios específicos para cada tamaño de vaso disponible.
+                    {productoSeleccionado.categoria === 'bebida'
+                      ? 'Configura las presentaciones en mililitros disponibles para esta bebida.'
+                      : 'Configura los precios específicos para cada tamaño de vaso disponible.'}
                   </p>
                 </div>
 
@@ -174,10 +195,149 @@ export function ProductosPage() {
                   onCrear={handleCrearTamanoPrecio}
                 />
               </GlassCard>
-            )}
+            ) : null}
           </>
         )}
       </div>
     </AppShell>
+  )
+}
+
+function DetalleProductoOtro({
+  producto,
+  onGuardar,
+}: {
+  producto: Producto
+  onGuardar: (precio: number, descripcion: string) => Promise<void>
+}) {
+  const [precio, setPrecio] = useState(String(producto.precio ?? ''))
+  const [descripcion, setDescripcion] = useState(producto.descripcion ?? '')
+  const [guardando, setGuardando] = useState(false)
+  const [mensaje, setMensaje] = useState<string | null>(null)
+
+  const precioNum = Number(precio)
+  const precioValido = Number.isFinite(precioNum) && precioNum > 0
+  const hayCambios =
+    precioValido && (precioNum !== producto.precio || (descripcion.trim() || null) !== producto.descripcion)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!precioValido) return
+    setGuardando(true)
+    setMensaje(null)
+    try {
+      await onGuardar(precioNum, descripcion)
+      setMensaje('✓ Cambios guardados correctamente.')
+    } catch {
+      setMensaje('Error al guardar los cambios.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <GlassCard tint="none" padding={20} style={{ border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#f59e0b' }}>
+          Detalles de "{producto.nombre}" (Categoría: Otros)
+        </h3>
+        <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-secondary)' }}>
+          Este producto se vende por unidad con precio directo, sin requerir vasos ni mililitros.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}>
+        <div style={{ width: 160 }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              marginBottom: 6,
+            }}
+          >
+            Precio de venta ($)
+          </label>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={precio}
+            onChange={(e) => setPrecio(e.target.value)}
+            style={{
+              width: '100%',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
+              borderRadius: 8,
+              padding: '8px 12px',
+              color: 'var(--text-primary)',
+              fontSize: 14,
+              fontWeight: 700,
+              fontFamily: 'var(--sans)',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+            required
+          />
+        </div>
+
+        <div style={{ flex: '1 1 240px' }}>
+          <label
+            style={{
+              display: 'block',
+              fontSize: 12.5,
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              marginBottom: 6,
+            }}
+          >
+            Descripción
+          </label>
+          <input
+            type="text"
+            value={descripcion}
+            onChange={(e) => setDescripcion(e.target.value)}
+            placeholder="Descripción del producto..."
+            style={{
+              width: '100%',
+              background: 'var(--input-bg)',
+              border: '1px solid var(--input-border)',
+              borderRadius: 8,
+              padding: '8px 12px',
+              color: 'var(--text-primary)',
+              fontSize: 14,
+              fontFamily: 'var(--sans)',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={guardando || !hayCambios}
+          style={{
+            background: hayCambios ? 'var(--brand-green)' : 'rgba(255, 255, 255, 0.1)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            padding: '9px 18px',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: hayCambios ? 'pointer' : 'not-allowed',
+            transition: 'all 0.2s ease',
+          }}
+        >
+          {guardando ? 'Guardando…' : 'Guardar cambios'}
+        </button>
+
+        {mensaje && (
+          <span style={{ width: '100%', fontSize: 12.5, fontWeight: 600, color: 'var(--brand-green)' }}>
+            {mensaje}
+          </span>
+        )}
+      </form>
+    </GlassCard>
   )
 }

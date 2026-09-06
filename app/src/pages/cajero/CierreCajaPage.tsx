@@ -32,7 +32,7 @@ export function CierreCajaPage() {
         ventasService.listarTamanosVasoActivos(),
       ])
       setTurno(turnoAbierto)
-      setTamanosVaso(listaTamanosVaso)
+      setTamanosVaso(listaTamanosVaso.filter((t) => t.tipo === 'vaso' || t.insumoId !== null))
 
       if (turnoAbierto) {
         try {

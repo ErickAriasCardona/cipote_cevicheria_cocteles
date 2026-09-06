@@ -1,14 +1,15 @@
-import type { InputHTMLAttributes } from 'react'
+import type { CSSProperties, InputHTMLAttributes } from 'react'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
   small?: boolean
+  containerStyle?: CSSProperties
 }
 
-export function Input({ label, error, small, id, style, ...props }: InputProps) {
+export function Input({ label, error, small, id, style, containerStyle, ...props }: InputProps) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, ...containerStyle }}>
       {label && (
         <label
           htmlFor={id}

@@ -2,9 +2,9 @@
 
 Sistema POS (punto de venta) y administrativo para el negocio "Cipote Ceviche Cocteles": apertura/cierre de caja, ventas con pago simple o mixto, control de inventario por receta, gastos operativos y reportes de ventas. Dos roles operativos: **Cajero** y **Administrador**.
 
-## Estado actual (2026-09-05)
+## Estado actual (2026-09-06)
 
-**9 de 10 bloques del MVP construidos y verificados en producción local.** Solo falta el cierre técnico y despliegue (BD-10). En paralelo está en desarrollo un rediseño de UI ("Liquid Glass") que no toca lógica de negocio ni RLS.
+**10 de 10 bloques del MVP construidos, verificados y desplegados (MVP 1.0 100% completado).** Desplegado en: **https://app-erick-arias-projects.vercel.app/** — ⚠️ actualmente detrás de **Vercel Deployment Protection** (exige cuenta de Vercel con acceso al proyecto; verificado con navegador real, la redirección real es a `vercel.com/sso-api`, no al login de la app). Desactivarlo en Project Settings → Deployment Protection de Vercel si se necesita acceso público (relevante para la landing con carrito → WhatsApp de BD-11). El rediseño de UI ("Liquid Glass", BD-11) ya está construido y desplegado — no toca lógica de negocio ni RLS.
 
 La documentación funcional/técnica completa (arquitectura, reglas de negocio, modelo de datos, backlog, matriz de desarrollo por bloque) vive en `DOCUMENTACION/` — un vault de Obsidian con su propio repositorio git, deliberadamente fuera de este repo (ver `.gitignore`). Empezar por `DOCUMENTACION/README.md`.
 
@@ -75,6 +75,7 @@ Modelo de autorización 100% server-side vía políticas RLS estáticas (`fn_che
 
 ## Despliegue
 
-- **Frontend:** Vercel (`app/vercel.json`), framework Vite, variables de entorno `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` configuradas en el dashboard de Vercel — nunca en el repo.
+- **Frontend:** Vercel (`app/vercel.json`), framework Vite, variables de entorno `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` configuradas en el dashboard de Vercel — nunca en el repo. **Desplegado en:** https://app-erick-arias-projects.vercel.app/ (⚠️ con Vercel Deployment Protection activa — ver nota de estado arriba).
 - **Backend:** proyecto Supabase gestionado (cloud). Migraciones y Edge Functions se despliegan vía Supabase CLI contra el proyecto remoto.
 - La `service_role key` de Supabase nunca se expone al frontend; solo la usan las Edge Functions en su entorno de ejecución seguro.
+- Auditoría de seguridad end-to-end (`npx tsx scripts/auditoria-rls.ts`, BD-10.2): 22/22 pruebas PASS re-verificadas en vivo.

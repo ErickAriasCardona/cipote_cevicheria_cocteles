@@ -28,6 +28,7 @@ export function VentaForm({
   preciosPorTamano,
   onRegistrar,
 }: VentaFormProps) {
+  const [categoriaFiltro, setCategoriaFiltro] = useState<'todas' | 'ceviche' | 'bebida' | 'otro'>('todas')
   const [productoId, setProductoId] = useState(productos[0]?.id ?? '')
   const [tamanoVasoId, setTamanoVasoId] = useState('')
   const [cantidad, setCantidad] = useState('1')
@@ -47,32 +48,58 @@ export function VentaForm({
   const [exito, setExito] = useState<string | null>(null)
   const { confirmar } = useConfirmacion()
 
-  // Filtrar tamaños configurados para el producto actual
+  const productosFiltrados = useMemo(() => {
+    if (categoriaFiltro === 'todas') return productos
+    return productos.filter((p) => p.categoria === categoriaFiltro)
+  }, [productos, categoriaFiltro])
+
+  useEffect(() => {
+    if (productosFiltrados.length > 0 && !productosFiltrados.some((p) => p.id === productoId)) {
+      setProductoId(productosFiltrados[0].id)
+    }
+  }, [productosFiltrados, productoId])
+
+  const productoObj = useMemo(
+    () => productos.find((p) => p.id === productoId),
+    [productos, productoId],
+  )
+  const esOtro = productoObj?.categoria === 'otro'
+
+  // Filtrar tamaños configurados para el producto actual (solo aplica a ceviche y bebida)
   const tamanosConfigurados = useMemo(() => {
-    if (!productoId) return []
+    if (!productoId || esOtro) return []
     return tamanosVaso.filter((t) =>
       preciosPorTamano.some((p) => p.productoId === productoId && p.tamanoVasoId === t.id),
     )
-  }, [productoId, tamanosVaso, preciosPorTamano])
+  }, [productoId, esOtro, tamanosVaso, preciosPorTamano])
 
   // Seleccionar automáticamente el primer tamaño disponible si cambia el producto
   useEffect(() => {
-    if (tamanosConfigurados.length > 0) {
+    if (esOtro) {
+      setTamanoVasoId('')
+    } else if (tamanosConfigurados.length > 0) {
       if (!tamanosConfigurados.some((t) => t.id === tamanoVasoId)) {
         setTamanoVasoId(tamanosConfigurados[0].id)
       }
     } else {
       setTamanoVasoId('')
     }
-  }, [tamanosConfigurados, tamanoVasoId])
+  }, [esOtro, tamanosConfigurados, tamanoVasoId])
 
-  const precioSeleccionado = preciosPorTamano.find(
-    (fila) => fila.productoId === productoId && fila.tamanoVasoId === tamanoVasoId,
-  )
+  const precioSeleccionado = useMemo(() => {
+    if (esOtro) {
+      return productoObj?.precio ?? null
+    }
+    const fila = preciosPorTamano.find(
+      (p) => p.productoId === productoId && p.tamanoVasoId === tamanoVasoId,
+    )
+    return fila ? fila.precio : null
+  }, [esOtro, productoObj, preciosPorTamano, productoId, tamanoVasoId])
+
   const cantidadNumerica = Number(cantidad)
   const total = useMemo(() => {
-    if (!precioSeleccionado || !Number.isFinite(cantidadNumerica) || cantidadNumerica <= 0) return 0
-    return Math.round(precioSeleccionado.precio * cantidadNumerica * 100) / 100
+    if (precioSeleccionado === null || precioSeleccionado <= 0 || !Number.isFinite(cantidadNumerica) || cantidadNumerica <= 0) return 0
+    return Math.round(precioSeleccionado * cantidadNumerica * 100) / 100
   }, [precioSeleccionado, cantidadNumerica])
 
   // Sincronizar automáticamente el método de pago por defecto en efectivo con el total
@@ -125,12 +152,16 @@ export function VentaForm({
       setError('Selecciona un producto.')
       return
     }
-    if (!tamanoVasoId) {
-      setError('Selecciona un tamaño de vaso.')
+    if (!esOtro && !tamanoVasoId) {
+      setError('Selecciona una presentación o tamaño de vaso.')
       return
     }
-    if (!precioSeleccionado) {
-      setError('Este producto no tiene un precio configurado para el tamaño de vaso seleccionado.')
+    if (precioSeleccionado === null || precioSeleccionado <= 0) {
+      setError(
+        esOtro
+          ? 'Este producto no tiene un precio directo configurado.'
+          : 'Este producto no tiene un precio configurado para el tamaño de vaso seleccionado.',
+      )
       return
     }
     if (!Number.isInteger(cantidadNumerica) || cantidadNumerica <= 0) {
@@ -146,8 +177,8 @@ export function VentaForm({
       return
     }
 
-    const productoObj = productos.find((p) => p.id === productoId)
     const tamanoObj = tamanosVaso.find((t) => t.id === tamanoVasoId)
+    const tamanoEtiquetaConfirm = esOtro ? 'Unidad' : (tamanoObj?.etiqueta ?? '')
 
     // Detalle de devuelta para el modal de confirmación
     const pagosEfectivo = pagos.filter((p) => p.metodoPago === 'efectivo')
@@ -166,7 +197,7 @@ export function VentaForm({
 
     const ok = await confirmar({
       titulo: 'Registrar venta',
-      mensaje: `¿Confirmas registrar la venta de ${cantidadNumerica}x ${productoObj?.nombre ?? ''} (${tamanoObj?.etiqueta ?? ''}) por un total de ${fmt(total)} con ${pagos.length} método(s) de pago?${detalleDevueltaConfirmacion}\n\nEsta acción descuenta inventario de vasos y no se puede deshacer desde este panel.`,
+      mensaje: `¿Confirmas registrar la venta de ${cantidadNumerica}x ${productoObj?.nombre ?? ''} (${tamanoEtiquetaConfirm}) por un total de ${fmt(total)} con ${pagos.length} método(s) de pago?${detalleDevueltaConfirmacion}\n\nEsta acción descuenta inventario y no se puede deshacer desde este panel.`,
       textoConfirmar: 'Registrar venta',
       varianteConfirmar: 'primary',
     })
@@ -196,7 +227,7 @@ export function VentaForm({
 
       await onRegistrar({
         productoId,
-        tamanoVasoId,
+        tamanoVasoId: esOtro ? null : tamanoVasoId,
         cantidad: cantidadNumerica,
         tipoEntrega,
         observaciones: observacionesFinales,
@@ -212,7 +243,7 @@ export function VentaForm({
 
       setVentaExitosa({
         producto: productoObj?.nombre ?? 'Producto',
-        tamano: tamanoObj?.etiqueta ?? '',
+        tamano: tamanoEtiquetaConfirm,
         cantidad: cantidadNumerica,
         total,
         efectivoRecibido: pagosEfectivo.length > 0 ? totalRecibidoEfectivo : undefined,
@@ -271,8 +302,49 @@ export function VentaForm({
               color: 'var(--text-primary)',
             }}
           >
-            Producto y Vaso
+            Producto y Presentación
           </h2>
+
+          {/* Filtro rápido por categoría */}
+          <div style={{ marginBottom: 14 }}>
+            <label
+              style={{
+                display: 'block',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
+                marginBottom: 6,
+              }}
+            >
+              Categoría
+            </label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <Chip
+                active={categoriaFiltro === 'todas'}
+                onClick={() => setCategoriaFiltro('todas')}
+              >
+                Todos
+              </Chip>
+              <Chip
+                active={categoriaFiltro === 'ceviche'}
+                onClick={() => setCategoriaFiltro('ceviche')}
+              >
+                🐟 Ceviches
+              </Chip>
+              <Chip
+                active={categoriaFiltro === 'bebida'}
+                onClick={() => setCategoriaFiltro('bebida')}
+              >
+                🥤 Bebidas
+              </Chip>
+              <Chip
+                active={categoriaFiltro === 'otro'}
+                onClick={() => setCategoriaFiltro('otro')}
+              >
+                📦 Otros
+              </Chip>
+            </div>
+          </div>
 
           <Select
             id="venta_producto"
@@ -281,8 +353,13 @@ export function VentaForm({
             onChange={(e) => setProductoId(e.target.value)}
             required
           >
-            {productos.map((producto) => (
+            {productosFiltrados.map((producto) => (
               <option key={producto.id} value={producto.id}>
+                {producto.categoria === 'ceviche'
+                  ? '🐟 '
+                  : producto.categoria === 'bebida'
+                  ? '🥤 '
+                  : '📦 '}
                 {producto.nombre}
               </option>
             ))}
@@ -299,37 +376,63 @@ export function VentaForm({
             required
           />
 
-          {/* Fila de Chips de Tamaño de Vaso */}
-          <div style={{ marginBottom: 16 }}>
-            <label
+          {/* Fila condicional: Producto individual ('otro') vs Presentaciones ('ceviche'/'bebida') */}
+          {esOtro ? (
+            <div
               style={{
-                display: 'block',
-                fontSize: 13,
-                fontWeight: 500,
-                color: 'var(--text-secondary)',
-                marginBottom: 8,
+                marginBottom: 16,
+                padding: '12px 14px',
+                background: 'var(--input-bg)',
+                border: '1px dashed var(--input-border)',
+                borderRadius: 12,
               }}
             >
-              Tamaño de vaso
-            </label>
-            {tamanosConfigurados.length > 0 ? (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {tamanosConfigurados.map((tamano) => (
-                  <Chip
-                    key={tamano.id}
-                    active={tamanoVasoId === tamano.id}
-                    onClick={() => setTamanoVasoId(tamano.id)}
-                  >
-                    {tamano.etiqueta}
-                  </Chip>
-                ))}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  📦 Producto Individual
+                </span>
+                <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--brand-green)' }}>
+                  {fmt(productoObj?.precio ?? 0)} c/u
+                </span>
               </div>
-            ) : (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--red-text)' }}>
-                Este producto no tiene tamaños ni precios activos configurados.
-              </p>
-            )}
-          </div>
+              {productoObj?.descripcion && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+                  {productoObj.descripcion}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: 13,
+                  fontWeight: 500,
+                  color: 'var(--text-secondary)',
+                  marginBottom: 8,
+                }}
+              >
+                {productoObj?.categoria === 'bebida' ? 'Presentación (Mililitros)' : 'Tamaño de vaso (Onzas)'}
+              </label>
+              {tamanosConfigurados.length > 0 ? (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {tamanosConfigurados.map((tamano) => (
+                    <Chip
+                      key={tamano.id}
+                      active={tamanoVasoId === tamano.id}
+                      onClick={() => setTamanoVasoId(tamano.id)}
+                    >
+                      {tamano.etiqueta}
+                    </Chip>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--red-text)' }}>
+                  Este producto no tiene tamaños ni precios activos configurados.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Chips de Tipo de Entrega */}
           <div style={{ marginBottom: 16 }}>
@@ -395,9 +498,9 @@ export function VentaForm({
             >
               {fmt(total)}
             </div>
-            {precioSeleccionado && cantidadNumerica > 1 && (
+            {precioSeleccionado !== null && precioSeleccionado > 0 && cantidadNumerica > 1 && (
               <span style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
-                ({cantidadNumerica} × {fmt(precioSeleccionado.precio)})
+                ({cantidadNumerica} × {fmt(precioSeleccionado)})
               </span>
             )}
           </div>

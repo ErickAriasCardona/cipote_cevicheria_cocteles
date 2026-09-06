@@ -43,7 +43,7 @@ export function ResultadoCierre({ resultado, tamanosVaso }: ResultadoCierreProps
 
   function etiquetaTamano(tamanoVasoId: string): string {
     const tamano = tamanosVaso.find((t) => t.id === tamanoVasoId)
-    return tamano ? `${tamano.etiqueta} (${tamano.onzas} oz)` : tamanoVasoId
+    return tamano ? tamano.etiqueta : tamanoVasoId
   }
 
   return (

@@ -37,8 +37,10 @@ import type { VentaPago } from '../types/ventaPago'
 interface TamanoVasoRow {
   id: string
   etiqueta: string
-  onzas: number
-  insumo_id: string
+  tipo: 'vaso' | 'bebida'
+  onzas: number | null
+  mililitros: number | null
+  insumo_id: string | null
   activo: boolean
   created_at: string
 }
@@ -47,7 +49,9 @@ function mapTamanoVaso(row: TamanoVasoRow): TamanoVaso {
   return {
     id: row.id,
     etiqueta: row.etiqueta,
+    tipo: row.tipo,
     onzas: row.onzas,
+    mililitros: row.mililitros,
     insumoId: row.insumo_id,
     activo: row.activo,
     createdAt: row.created_at,
@@ -59,7 +63,7 @@ interface VentaRow {
   turno_id: string
   cajero_id: string
   producto_id: string
-  tamano_vaso_id: string
+  tamano_vaso_id: string | null
   cantidad: number
   precio_unitario: number
   total: number
@@ -111,9 +115,9 @@ export const ventasService = {
   async listarTamanosVasoActivos(): Promise<TamanoVaso[]> {
     const { data, error } = await supabase
       .from('tamanos_vaso')
-      .select('id, etiqueta, onzas, insumo_id, activo, created_at')
+      .select('id, etiqueta, tipo, onzas, mililitros, insumo_id, activo, created_at')
       .eq('activo', true)
-      .order('onzas', { ascending: true })
+      .order('id', { ascending: true })
     if (error) throw error
     return (data as TamanoVasoRow[]).map(mapTamanoVaso)
   },
@@ -130,7 +134,7 @@ export const ventasService = {
     const { data, error } = await supabase.functions.invoke('registrar-venta', {
       body: {
         producto_id: input.productoId,
-        tamano_vaso_id: input.tamanoVasoId,
+        tamano_vaso_id: input.tamanoVasoId ?? null,
         cantidad: input.cantidad,
         tipo_entrega: input.tipoEntrega,
         observaciones: input.observaciones ?? null,
