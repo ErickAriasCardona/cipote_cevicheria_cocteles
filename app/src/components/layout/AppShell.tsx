@@ -131,6 +131,15 @@ export function AppShell({ children, hideTabs = false, rol }: AppShellProps) {
           style={{
             display: 'flex',
             alignItems: 'center',
+            // justifyContent: 'space-between' -- en desktop no tiene efecto
+            // (.navbar-desktop-content usa flex: '1 1 auto' y ya consume todo
+            // el espacio sobrante entre logo y el resto, así que no queda
+            // espacio libre que redistribuir). En tablet/mobile, con
+            // .navbar-desktop-content oculto (display:none, ver index.css),
+            // esta es la propiedad que separa el logo (izquierda) del botón
+            // de hamburguesa (derecha) a los extremos de la barra -- pedido
+            // explícito de Erick (ticket 2026-09-12, tarea 2).
+            justifyContent: 'space-between',
             flexWrap: 'nowrap',
             gap: 16,
             marginBottom: 20,

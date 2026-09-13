@@ -37,6 +37,26 @@
 // "el turno abierto que pertenece a quien llama" — no el turno abierto
 // global sin filtrar — porque solo puede existir un turno abierto a la vez
 // (índice único parcial de BD-03) y debe pertenecer a quien vende.
+//
+// Extensión Promociones (ticket post-MVP "Carta/Promociones", ticket 1/2,
+// aditiva — el camino de producto individual queda byte-a-byte igual que
+// antes, solo movido dentro de una rama `if (datos.productoId)`): el
+// payload ahora acepta `promocion_id` como alternativa a `producto_id`
+// (exactamente uno de los dos, nunca ambos ni ninguno, validado en
+// `validarPayload`). Al vender una promoción se resuelve su composición
+// (`promocion_productos`) y, por CADA producto componente, se recalcula
+// exactamente la misma lógica de insumos que ya existe para un producto
+// individual (receta de `producto_receta` + insumo-vaso de su
+// `tamano_vaso_id`, fijado de antemano en `promocion_productos` — ver
+// `20260912000009_promocion_productos.sql`), acumulando todo en el MISMO
+// `Map<insumo_id, cantidad>` que ya usaba el camino individual. A partir de
+// ahí (bloqueo `FOR UPDATE`, validación de stock, UPDATE + `movimientos_
+// inventario`) el código es idéntico y compartido entre ambos caminos: no
+// hay dos copias de esa lógica. El precio unitario/total de una venta de
+// promoción usa siempre `promociones.precio` (nunca la suma de precios
+// individuales de sus componentes) — ver
+// `20260912000010_ventas_promocion_id.sql` para el diseño de `ventas.
+// promocion_id`/`producto_id` (ambos nullable, exactamente uno no-nulo).
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
 import { Client } from 'jsr:@db/postgres@0.19.5'
@@ -59,7 +79,10 @@ interface PagoPayload {
 }
 
 interface RegistrarVentaPayload {
-  productoId: string
+  /** Exactamente uno de productoId/promocionId viene no-nulo (validado en
+   * validarPayload). */
+  productoId: string | null
+  promocionId: string | null
   tamanoVasoId?: string | null
   cantidad: number
   tipoEntrega: TipoEntrega
@@ -76,7 +99,7 @@ interface TurnoRow {
 interface ProductoRow {
   id: string
   activo: boolean
-  categoria: 'ceviche' | 'bebida' | 'otro'
+  categoria: 'ceviche' | 'granizado' | 'bebida' | 'otro'
   precio: string | null
 }
 interface TamanoVasoRow {
@@ -99,11 +122,39 @@ interface InsumoRow {
 interface StockActualRow {
   stock_actual: string
 }
+/** Promoción (ticket post-MVP Carta/Promociones): combo con precio propio,
+ * distinto de la suma de precios de sus productos componentes. */
+interface PromocionRow {
+  id: string
+  nombre: string
+  precio: string
+  activo: boolean
+}
+/** Fila de `promocion_productos`: un producto componente de la promoción,
+ * con su cantidad dentro del combo y, si aplica, el tamaño de vaso fijado
+ * de antemano por el Administrador al armar la promoción (nunca elegido por
+ * el Cajero en el momento de la venta). `cantidad` es `integer` en BD: el
+ * driver la entrega ya como `number` nativo (igual que `datos.cantidad`). */
+interface PromocionProductoRow {
+  producto_id: string
+  cantidad: number
+  tamano_vaso_id: string | null
+}
+/** Producto componente de una promoción: se necesita su nombre (para
+ * mensajes de error legibles), si sigue activo (RN-005 también aplica a
+ * componentes) y su categoría (para saber si requiere tamaño de vaso). */
+interface ProductoComponenteRow {
+  id: string
+  nombre: string
+  activo: boolean
+  categoria: 'ceviche' | 'granizado' | 'bebida' | 'otro'
+}
 interface VentaRow {
   id: string
   turno_id: string
   cajero_id: string
-  producto_id: string
+  producto_id: string | null
+  promocion_id: string | null
   tamano_vaso_id: string | null
   cantidad: number
   precio_unitario: string
@@ -164,7 +215,8 @@ function num(valor: string | number): number {
 }
 
 function validarPayload(body: Record<string, unknown>): RegistrarVentaPayload {
-  const productoId = body.producto_id
+  const productoIdRaw = body.producto_id
+  const promocionIdRaw = body.promocion_id
   const tamanoVasoId =
     typeof body.tamano_vaso_id === 'string' && body.tamano_vaso_id.trim() !== ''
       ? body.tamano_vaso_id.trim()
@@ -174,8 +226,25 @@ function validarPayload(body: Record<string, unknown>): RegistrarVentaPayload {
   const observaciones = body.observaciones
   const pagos = body.pagos
 
-  if (typeof productoId !== 'string' || productoId.trim() === '') {
-    throw new AppError(422, 'producto_id es obligatorio.')
+  const productoId =
+    typeof productoIdRaw === 'string' && productoIdRaw.trim() !== '' ? productoIdRaw.trim() : null
+  const promocionId =
+    typeof promocionIdRaw === 'string' && promocionIdRaw.trim() !== '' ? promocionIdRaw.trim() : null
+
+  // Exactamente uno de los dos (ticket post-MVP Carta/Promociones): nunca
+  // ambos, nunca ninguno.
+  if (productoId === null && promocionId === null) {
+    throw new AppError(422, 'Debes indicar producto_id o promocion_id.')
+  }
+  if (productoId !== null && promocionId !== null) {
+    throw new AppError(422, 'No puedes indicar producto_id y promocion_id al mismo tiempo.')
+  }
+  // tamano_vaso_id solo aplica al camino de producto individual: en una
+  // promoción, el tamaño de cada componente ya quedó fijado de antemano en
+  // promocion_productos (ver migración 20260912000009), no se elige en la
+  // venta.
+  if (promocionId !== null && tamanoVasoId !== null) {
+    throw new AppError(422, 'tamano_vaso_id no aplica al vender una promoción.')
   }
   const cantidadNumerica = numero(cantidad)
   if (cantidadNumerica === null || !Number.isInteger(cantidadNumerica) || cantidadNumerica <= 0) {
@@ -208,6 +277,7 @@ function validarPayload(body: Record<string, unknown>): RegistrarVentaPayload {
 
   return {
     productoId,
+    promocionId,
     tamanoVasoId,
     cantidad: cantidadNumerica,
     tipoEntrega: tipoEntrega as TipoEntrega,
@@ -298,62 +368,197 @@ Deno.serve(async (req: Request) => {
       }
       const turnoId = turnoResult.rows[0].id
 
-      // 2) Producto vigente y activo.
-      const productoResult = await transaction.queryObject<ProductoRow>(
-        `select id, activo, categoria, precio from public.productos where id = $1`,
-        [datos.productoId],
-      )
-      if (productoResult.rows.length === 0 || productoResult.rows[0].activo !== true) {
-        throw new AppError(422, 'El producto seleccionado no existe o no está activo.')
-      }
-      const producto = productoResult.rows[0]
-
+      // 2) Resolución de qué se vende — producto individual o promoción
+      // (ticket post-MVP Carta/Promociones) — y de los insumos a descontar
+      // (PD-005 + RF-04.3: 1x insumo-vaso por unidad vendida si aplica +
+      // producto_receta filtrada por condicion IN ('siempre', tipo_entrega)
+      // y activo=true, cada uno x cantidad vendida). Ambas ramas acumulan en
+      // el MISMO `Map<insumo_id, cantidad>`, que alimenta sin duplicar
+      // lógica el bloqueo `FOR UPDATE` + validación de stock + UPDATE +
+      // `movimientos_inventario` de más abajo (pasos 6/9), idénticos para
+      // ambos caminos.
       let precioUnitario: number
-      let insumoVasoId: string | null = null
       let tamanoVasoIdFinal: string | null = null
+      let ventaProductoId: string | null = null
+      let ventaPromocionId: string | null = null
+      const insumosADescontar = new Map<string, number>()
 
-      if (producto.categoria === 'otro') {
-        // Categoría 'otro': precio directo del producto, sin tamaño de vaso ni insumo de vaso
-        if (!producto.precio || num(producto.precio) <= 0) {
-          throw new AppError(422, 'El producto no tiene un precio configurado.')
-        }
-        precioUnitario = num(producto.precio)
-        tamanoVasoIdFinal = null
-        insumoVasoId = null
-      } else {
-        // Categoría 'ceviche' o 'bebida': requiere tamaño de vaso
-        if (!datos.tamanoVasoId) {
-          throw new AppError(422, 'Debes seleccionar una presentación/tamaño para este producto.')
-        }
-
-        // 3) Tamaño de vaso vigente y activo (determina el insumo-vaso si aplica, PD-005).
-        const tamanoResult = await transaction.queryObject<TamanoVasoRow>(
-          `select id, activo, insumo_id from public.tamanos_vaso where id = $1`,
-          [datos.tamanoVasoId],
+      if (datos.productoId) {
+        // ---- Producto individual: código idéntico al existente antes de
+        // esta extensión, solo reubicado dentro de esta rama. ----
+        const productoResult = await transaction.queryObject<ProductoRow>(
+          `select id, activo, categoria, precio from public.productos where id = $1`,
+          [datos.productoId],
         )
-        if (tamanoResult.rows.length === 0 || tamanoResult.rows[0].activo !== true) {
-          throw new AppError(422, 'El tamaño seleccionado no existe o no está activo.')
+        if (productoResult.rows.length === 0 || productoResult.rows[0].activo !== true) {
+          throw new AppError(422, 'El producto seleccionado no existe o no está activo.')
         }
-        insumoVasoId = tamanoResult.rows[0].insumo_id
-        tamanoVasoIdFinal = tamanoResult.rows[0].id
+        const producto = productoResult.rows[0]
 
-        // 3.1) Precio vigente para esta combinación producto x tamaño (RN-011).
-        const precioResult = await transaction.queryObject<ProductoTamanoPrecioRow>(
-          `select precio from public.producto_tamano_precio
-           where producto_id = $1 and tamano_vaso_id = $2 and activo = true`,
-          [datos.productoId, datos.tamanoVasoId],
+        let insumoVasoId: string | null = null
+
+        if (producto.categoria === 'otro') {
+          // Categoría 'otro': precio directo del producto, sin tamaño de vaso ni insumo de vaso
+          if (!producto.precio || num(producto.precio) <= 0) {
+            throw new AppError(422, 'El producto no tiene un precio configurado.')
+          }
+          precioUnitario = num(producto.precio)
+        } else {
+          // Categoría 'ceviche'/'granizado'/'bebida': requiere tamaño de vaso
+          if (!datos.tamanoVasoId) {
+            throw new AppError(422, 'Debes seleccionar una presentación/tamaño para este producto.')
+          }
+
+          // 2.1) Tamaño de vaso vigente y activo (determina el insumo-vaso si aplica, PD-005).
+          const tamanoResult = await transaction.queryObject<TamanoVasoRow>(
+            `select id, activo, insumo_id from public.tamanos_vaso where id = $1`,
+            [datos.tamanoVasoId],
+          )
+          if (tamanoResult.rows.length === 0 || tamanoResult.rows[0].activo !== true) {
+            throw new AppError(422, 'El tamaño seleccionado no existe o no está activo.')
+          }
+          insumoVasoId = tamanoResult.rows[0].insumo_id
+          tamanoVasoIdFinal = tamanoResult.rows[0].id
+
+          // 2.2) Precio vigente para esta combinación producto x tamaño (RN-011).
+          const precioResult = await transaction.queryObject<ProductoTamanoPrecioRow>(
+            `select precio from public.producto_tamano_precio
+             where producto_id = $1 and tamano_vaso_id = $2 and activo = true`,
+            [datos.productoId, datos.tamanoVasoId],
+          )
+          if (precioResult.rows.length === 0) {
+            throw new AppError(
+              422,
+              'Este producto no tiene un precio configurado para el tamaño seleccionado.',
+            )
+          }
+          precioUnitario = num(precioResult.rows[0].precio)
+        }
+
+        if (insumoVasoId) {
+          insumosADescontar.set(insumoVasoId, (insumosADescontar.get(insumoVasoId) ?? 0) + datos.cantidad)
+        }
+
+        const recetaResult = await transaction.queryObject<RecetaRow>(
+          `select insumo_id, cantidad from public.producto_receta
+           where producto_id = $1
+             and activo = true
+             and condicion in ('siempre', $2)`,
+          [datos.productoId, datos.tipoEntrega],
         )
-        if (precioResult.rows.length === 0) {
-          throw new AppError(
-            422,
-            'Este producto no tiene un precio configurado para el tamaño seleccionado.',
+        for (const fila of recetaResult.rows) {
+          const insumoId = fila.insumo_id
+          const cantidadPorUnidad = num(fila.cantidad)
+          insumosADescontar.set(
+            insumoId,
+            (insumosADescontar.get(insumoId) ?? 0) + cantidadPorUnidad * datos.cantidad,
           )
         }
-        precioUnitario = num(precioResult.rows[0].precio)
+
+        ventaProductoId = datos.productoId
+      } else {
+        // ---- Promoción (ticket post-MVP Carta/Promociones): descuenta
+        // exactamente como si se hubiera vendido cada producto componente
+        // por separado (su receta + su insumo-vaso si aplica), multiplicado
+        // por la cantidad de cada componente dentro del combo Y por la
+        // cantidad de combos vendidos (datos.cantidad). ----
+        const promocionResult = await transaction.queryObject<PromocionRow>(
+          `select id, nombre, precio, activo from public.promociones where id = $1`,
+          [datos.promocionId],
+        )
+        if (promocionResult.rows.length === 0 || promocionResult.rows[0].activo !== true) {
+          throw new AppError(422, 'La promoción seleccionada no existe o no está activa.')
+        }
+        const promocion = promocionResult.rows[0]
+        precioUnitario = num(promocion.precio)
+        ventaPromocionId = promocion.id
+        // tamanoVasoIdFinal queda null: una promoción puede combinar
+        // productos con distintos tamaños (o ninguno); el tamaño de cada
+        // componente vive en promocion_productos, no en ventas.
+
+        const componentesResult = await transaction.queryObject<PromocionProductoRow>(
+          `select producto_id, cantidad, tamano_vaso_id from public.promocion_productos
+           where promocion_id = $1`,
+          [datos.promocionId],
+        )
+        if (componentesResult.rows.length === 0) {
+          throw new AppError(
+            409,
+            'La promoción no tiene productos configurados y no se puede vender.',
+          )
+        }
+
+        for (const componente of componentesResult.rows) {
+          const productoComponenteResult = await transaction.queryObject<ProductoComponenteRow>(
+            `select id, nombre, activo, categoria from public.productos where id = $1`,
+            [componente.producto_id],
+          )
+          if (
+            productoComponenteResult.rows.length === 0 ||
+            productoComponenteResult.rows[0].activo !== true
+          ) {
+            throw new AppError(
+              409,
+              'La promoción incluye un producto que ya no está activo y no se puede vender.',
+            )
+          }
+          const productoComponente = productoComponenteResult.rows[0]
+          // Cantidad total de este componente en la venta: unidades del
+          // componente dentro del combo x cantidad de combos vendidos.
+          const cantidadTotalComponente = componente.cantidad * datos.cantidad
+
+          if (productoComponente.categoria !== 'otro') {
+            if (!componente.tamano_vaso_id) {
+              throw new AppError(
+                409,
+                `La promoción no tiene un tamaño configurado para "${productoComponente.nombre}" y no se puede vender.`,
+              )
+            }
+            const tamanoComponenteResult = await transaction.queryObject<TamanoVasoRow>(
+              `select id, activo, insumo_id from public.tamanos_vaso where id = $1`,
+              [componente.tamano_vaso_id],
+            )
+            if (
+              tamanoComponenteResult.rows.length === 0 ||
+              tamanoComponenteResult.rows[0].activo !== true
+            ) {
+              throw new AppError(
+                409,
+                `El tamaño configurado para "${productoComponente.nombre}" en esta promoción ya no está activo.`,
+              )
+            }
+            const insumoVasoIdComponente = tamanoComponenteResult.rows[0].insumo_id
+            if (insumoVasoIdComponente) {
+              insumosADescontar.set(
+                insumoVasoIdComponente,
+                (insumosADescontar.get(insumoVasoIdComponente) ?? 0) + cantidadTotalComponente,
+              )
+            }
+          }
+
+          const recetaComponenteResult = await transaction.queryObject<RecetaRow>(
+            `select insumo_id, cantidad from public.producto_receta
+             where producto_id = $1
+               and activo = true
+               and condicion in ('siempre', $2)`,
+            [componente.producto_id, datos.tipoEntrega],
+          )
+          for (const fila of recetaComponenteResult.rows) {
+            const insumoId = fila.insumo_id
+            const cantidadPorUnidad = num(fila.cantidad)
+            insumosADescontar.set(
+              insumoId,
+              (insumosADescontar.get(insumoId) ?? 0) + cantidadPorUnidad * cantidadTotalComponente,
+            )
+          }
+        }
       }
 
-      // 4) Cálculo de total (snapshot) y revalidación estricta de RN-006 en
-      // centavos enteros.
+      // 3) Cálculo de total (snapshot) y revalidación estricta de RN-006 en
+      // centavos enteros. precioUnitario es el de producto_tamano_precio/
+      // productos.precio ('otro') para un producto individual, o el de
+      // promociones.precio para una promoción — nunca la suma de precios
+      // individuales de sus componentes.
       const precioUnitarioCentavos = centavos(precioUnitario)
       const totalCentavos = precioUnitarioCentavos * datos.cantidad
       const total = totalCentavos / 100
@@ -366,33 +571,9 @@ Deno.serve(async (req: Request) => {
         )
       }
 
-      // 5) Insumos a descontar (PD-005 + RF-04.3): 1x insumo-vaso por unidad
-      // vendida (si insumoVasoId está definido) + producto_receta filtrada por condicion
-      // IN ('siempre', tipo_entrega) y activo=true, cada uno x cantidad vendida.
-      const insumosADescontar = new Map<string, number>()
-      if (insumoVasoId) {
-        insumosADescontar.set(insumoVasoId, (insumosADescontar.get(insumoVasoId) ?? 0) + datos.cantidad)
-      }
-
-      const recetaResult = await transaction.queryObject<RecetaRow>(
-        `select insumo_id, cantidad from public.producto_receta
-         where producto_id = $1
-           and activo = true
-           and condicion in ('siempre', $2)`,
-        [datos.productoId, datos.tipoEntrega],
-      )
-      for (const fila of recetaResult.rows) {
-        const insumoId = fila.insumo_id
-        const cantidadPorUnidad = num(fila.cantidad)
-        insumosADescontar.set(
-          insumoId,
-          (insumosADescontar.get(insumoId) ?? 0) + cantidadPorUnidad * datos.cantidad,
-        )
-      }
-
       const insumoIds = [...insumosADescontar.keys()]
 
-      // 6) Bloqueo real de las filas de insumos afectadas (RN-008 bajo
+      // 4) Bloqueo real de las filas de insumos afectadas (RN-008 bajo
       // concurrencia: dos ventas simultáneas del mismo insumo no pueden
       // ambas "ver" el mismo stock disponible y sobrevender).
       // Se ejecuta únicamente si hay insumos a descontar para evitar `IN ()`.
@@ -418,16 +599,19 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // 7) INSERT ventas.
+      // 5) INSERT ventas. Exactamente uno de ventaProductoId/ventaPromocionId
+      // es no-nulo (ck_ventas_producto_o_promocion, migración
+      // 20260912000010): producto individual o promoción, nunca ambos.
       const ventaResult = await transaction.queryObject<VentaRow>(
         `insert into public.ventas
-           (turno_id, cajero_id, producto_id, tamano_vaso_id, cantidad, precio_unitario, total, tipo_entrega, observaciones)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         returning id, turno_id, cajero_id, producto_id, tamano_vaso_id, cantidad, precio_unitario, total, tipo_entrega, observaciones, created_at`,
+           (turno_id, cajero_id, producto_id, promocion_id, tamano_vaso_id, cantidad, precio_unitario, total, tipo_entrega, observaciones)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         returning id, turno_id, cajero_id, producto_id, promocion_id, tamano_vaso_id, cantidad, precio_unitario, total, tipo_entrega, observaciones, created_at`,
         [
           turnoId,
           caller.id,
-          datos.productoId,
+          ventaProductoId,
+          ventaPromocionId,
           tamanoVasoIdFinal,
           datos.cantidad,
           precioUnitario,
@@ -438,7 +622,7 @@ Deno.serve(async (req: Request) => {
       )
       const venta = ventaResult.rows[0]
 
-      // 8) INSERT venta_pagos. estado_transferencia='pendiente' solo si
+      // 6) INSERT venta_pagos. estado_transferencia='pendiente' solo si
       // metodo_pago='transferencia_qr' — nunca aceptado del cliente.
       const pagosInsertados: VentaPagoRow[] = []
       for (const pago of datos.pagos) {
@@ -452,7 +636,7 @@ Deno.serve(async (req: Request) => {
         pagosInsertados.push(pagoResult.rows[0])
       }
 
-      // 9) UPDATE stock_actual + INSERT movimientos_inventario (trazabilidad).
+      // 7) UPDATE stock_actual + INSERT movimientos_inventario (trazabilidad).
       for (const [insumoId, cantidadDescontar] of insumosADescontar) {
         const updateResult = await transaction.queryObject<StockActualRow>(
           `update public.insumos
@@ -479,6 +663,7 @@ Deno.serve(async (req: Request) => {
             turno_id: venta.turno_id,
             cajero_id: venta.cajero_id,
             producto_id: venta.producto_id,
+            promocion_id: venta.promocion_id,
             tamano_vaso_id: venta.tamano_vaso_id,
             cantidad: venta.cantidad,
             precio_unitario: num(venta.precio_unitario),

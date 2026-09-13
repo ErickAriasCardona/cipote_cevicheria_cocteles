@@ -64,7 +64,8 @@ interface VentaRow {
   id: string
   turno_id: string
   cajero_id: string
-  producto_id: string
+  producto_id: string | null
+  promocion_id: string | null
   tamano_vaso_id: string | null
   cantidad: number
   precio_unitario: number
@@ -80,6 +81,7 @@ function mapVenta(row: VentaRow): Venta {
     turnoId: row.turno_id,
     cajeroId: row.cajero_id,
     productoId: row.producto_id,
+    promocionId: row.promocion_id,
     tamanoVasoId: row.tamano_vaso_id,
     cantidad: row.cantidad,
     precioUnitario: row.precio_unitario,
@@ -135,7 +137,8 @@ export const ventasService = {
   async registrarVenta(input: RegistrarVentaInput): Promise<RegistrarVentaResultado> {
     const { data, error } = await supabase.functions.invoke('registrar-venta', {
       body: {
-        producto_id: input.productoId,
+        producto_id: input.productoId ?? null,
+        promocion_id: input.promocionId ?? null,
         tamano_vaso_id: input.tamanoVasoId ?? null,
         cantidad: input.cantidad,
         tipo_entrega: input.tipoEntrega,
@@ -174,8 +177,8 @@ export const ventasService = {
     const { data, error } = await supabase
       .from('ventas')
       .select(
-        'id, turno_id, cajero_id, producto_id, tamano_vaso_id, cantidad, precio_unitario, total, ' +
-          'tipo_entrega, observaciones, created_at, eliminado, eliminado_por, eliminado_en, ' +
+        'id, turno_id, cajero_id, producto_id, promocion_id, tamano_vaso_id, cantidad, precio_unitario, ' +
+          'total, tipo_entrega, observaciones, created_at, eliminado, eliminado_por, eliminado_en, ' +
           'restablecido_por, restablecido_en, productos(nombre), tamanos_vaso(etiqueta)',
       )
       .order('created_at', { ascending: false })

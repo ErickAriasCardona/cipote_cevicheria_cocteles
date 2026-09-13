@@ -11,11 +11,20 @@ import type { RegistrarVentaPagoInput, VentaPago } from './ventaPago'
  */
 export type TipoEntrega = 'para_llevar' | 'consumo_lugar'
 
+/** `productoId`/`promocionId`: exactamente uno de los dos, nunca ambos ni
+ * ninguno (ticket post-MVP "Carta/Promociones", ver
+ * `20260912000010_ventas_promocion_id.sql`). Una venta de promoción tiene
+ * `productoId: null` y `promocionId` con el id de la promoción vendida;
+ * `precioUnitario`/`total` en ese caso son el precio de la promoción, nunca
+ * la suma de precios individuales de sus productos componentes. La UI de
+ * "vender una promoción" (Carta) es un ticket separado — este tipo solo
+ * deja el contrato listo para que lo use. */
 export interface Venta {
   id: string
   turnoId: string
   cajeroId: string
-  productoId: string
+  productoId: string | null
+  promocionId: string | null
   tamanoVasoId: string | null
   cantidad: number
   precioUnitario: number
@@ -28,9 +37,16 @@ export interface Venta {
 /** Payload para registrar una venta (HU-03.2/03.3/03.4) vía la Edge Function
  * `registrar-venta`. No incluye `cajeroId`/`turnoId`: ambos se resuelven
  * server-side desde `auth.uid()` y el turno abierto propio, nunca elegidos
- * por el Cajero ni confiados del cliente (mismo criterio que `AbrirCajaInput`). */
+ * por el Cajero ni confiados del cliente (mismo criterio que `AbrirCajaInput`).
+ *
+ * `productoId`/`promocionId` (ticket post-MVP "Carta/Promociones"):
+ * exactamente uno de los dos debe enviarse, nunca ambos ni ninguno — la
+ * Edge Function valida esto explícitamente y rechaza con 422 si no se
+ * cumple. `tamanoVasoId` solo aplica junto con `productoId` (una promoción
+ * ya trae el tamaño de cada componente fijado en `promocion_productos`). */
 export interface RegistrarVentaInput {
-  productoId: string
+  productoId?: string | null
+  promocionId?: string | null
   tamanoVasoId?: string | null
   cantidad: number
   tipoEntrega: TipoEntrega
