@@ -6,9 +6,11 @@ import { GlassCard } from '../ui/GlassCard'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
+import { TIPOS_UNIDAD_PRESET, formatearUnidad } from '../../utils/unidadMedida'
 
 interface InsumoFormProps {
   tiposPersonalizados?: string[]
+  tiposUnidadPersonalizados?: string[]
   insumosExistentes?: Insumo[]
   onCrear: (input: CrearInsumoInput) => Promise<void>
   onActualizar?: (id: string, input: ActualizarInsumoInput) => Promise<void>
@@ -16,15 +18,23 @@ interface InsumoFormProps {
 
 export function InsumoForm({
   tiposPersonalizados = [],
+  tiposUnidadPersonalizados = [],
   insumosExistentes = [],
   onCrear,
   onActualizar,
 }: InsumoFormProps) {
-  const [nombreSeleccionado, setNombreSeleccionado] = useState('__nuevo__')
+  // El selector identifica al insumo por `id`, no por `nombre`: desde que la
+  // unicidad real es (nombre, tipo, unidad_medida), pueden existir varias
+  // presentaciones distintas con el mismo nombre (ej. "Limón" en kg y
+  // "Limón" en unidad) y hace falta un identificador inequívoco para
+  // saber cuál de ellas se está editando/restockeando.
+  const [insumoSeleccionadoId, setInsumoSeleccionadoId] = useState('__nuevo__')
   const [nombreNuevo, setNombreNuevo] = useState('')
   const [tipoSeleccionado, setTipoSeleccionado] = useState('otro')
   const [nuevoTipoNombre, setNuevoTipoNombre] = useState('')
-  const [unidadMedida, setUnidadMedida] = useState('unidad')
+  const [tipoUnidadSeleccionado, setTipoUnidadSeleccionado] = useState('unidad')
+  const [nuevoTipoUnidadNombre, setNuevoTipoUnidadNombre] = useState('')
+  const [valorUnidad, setValorUnidad] = useState('1')
   const [stockActual, setStockActual] = useState('0')
   const [stockMinimo, setStockMinimo] = useState('0')
   const [stockMinimoDiario, setStockMinimoDiario] = useState('0')
@@ -33,31 +43,51 @@ export function InsumoForm({
   const [exito, setExito] = useState<string | null>(null)
   const { confirmar } = useConfirmacion()
 
-  const nombresUnicos = useMemo(() => {
-    return Array.from(new Set(insumosExistentes.map((i) => i.nombre).filter(Boolean))).sort((a, b) =>
-      a.localeCompare(b, 'es'),
-    )
+  const conteoPorNombre = useMemo(() => {
+    const conteo = new Map<string, number>()
+    for (const i of insumosExistentes) {
+      conteo.set(i.nombre, (conteo.get(i.nombre) ?? 0) + 1)
+    }
+    return conteo
   }, [insumosExistentes])
 
   const opcionesNombre = useMemo(() => {
+    const ordenados = [...insumosExistentes].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
     return [
-      ...nombresUnicos.map((n) => ({ value: n, label: n })),
+      ...ordenados.map((i) => {
+        // Si el nombre se repite (misma materia prima, distinta presentación),
+        // se aclara tipo + unidad en la etiqueta para no elegir la fila equivocada.
+        const esAmbiguo = (conteoPorNombre.get(i.nombre) ?? 0) > 1
+        return {
+          value: i.id,
+          label: esAmbiguo ? `${i.nombre} (${i.tipo} · ${i.unidadMedida})` : i.nombre,
+        }
+      }),
       { value: '__nuevo__', label: '+ Agregar nuevo nombre...' },
     ]
-  }, [nombresUnicos])
+  }, [insumosExistentes, conteoPorNombre])
 
   const opcionesTipo = [
-    { value: 'vaso_granizado', label: 'Vaso Granizado' },
-    { value: 'vaso_ceviche', label: 'Vaso Ceviche/Cóctel' },
     { value: 'otro', label: 'Otro' },
     ...tiposPersonalizados.map((t) => ({ value: t, label: t })),
     { value: '__nuevo__', label: '+ Agregar nuevo tipo...' },
   ]
 
-  const esNuevo = nombreSeleccionado === '__nuevo__'
+  const opcionesTipoUnidad = [
+    ...TIPOS_UNIDAD_PRESET,
+    ...tiposUnidadPersonalizados
+      .filter((t) => !TIPOS_UNIDAD_PRESET.some((preset) => preset.value === t))
+      .map((t) => ({ value: t, label: t })),
+    { value: '__nuevo__', label: '+ Agregar nuevo tipo de unidad...' },
+  ]
+
+  const esNuevo = insumoSeleccionadoId === '__nuevo__'
+  const insumoSeleccionado = esNuevo
+    ? null
+    : insumosExistentes.find((i) => i.id === insumoSeleccionadoId) ?? null
 
   function handleCambioNombreSeleccionado(val: string) {
-    setNombreSeleccionado(val)
+    setInsumoSeleccionadoId(val)
     setError(null)
     setExito(null)
 
@@ -65,24 +95,29 @@ export function InsumoForm({
       setNombreNuevo('')
       setTipoSeleccionado('otro')
       setNuevoTipoNombre('')
-      setUnidadMedida('unidad')
+      setTipoUnidadSeleccionado('unidad')
+      setNuevoTipoUnidadNombre('')
+      setValorUnidad('1')
       setStockActual('0')
       setStockMinimo('0')
       setStockMinimoDiario('0')
     } else {
-      const insumoEncontrado = insumosExistentes.find((i) => i.nombre === val)
+      const insumoEncontrado = insumosExistentes.find((i) => i.id === val)
       if (insumoEncontrado) {
-        if (insumoEncontrado.tipo === 'vaso' && insumoEncontrado.categoriaVaso === 'granizado') {
-          setTipoSeleccionado('vaso_granizado')
-        } else if (insumoEncontrado.tipo === 'vaso') {
-          setTipoSeleccionado('vaso_ceviche')
-        } else if (insumoEncontrado.tipo === 'otro') {
+        // Nota: si el insumo seleccionado es un remanente del mecanismo legado
+        // `tipo:'vaso'` (ver limpieza del desplegable más abajo), su tipo real
+        // ('vaso') ya no tiene opción propia en `opcionesTipo`; se preserva tal
+        // cual en el estado (comportamiento igual al de cualquier tipo dinámico
+        // no listado) para no perder datos si no se toca este campo al guardar.
+        if (insumoEncontrado.tipo === 'otro') {
           setTipoSeleccionado('otro')
         } else {
           setTipoSeleccionado(insumoEncontrado.tipo)
         }
         setNuevoTipoNombre('')
-        setUnidadMedida(insumoEncontrado.unidadMedida)
+        setTipoUnidadSeleccionado(insumoEncontrado.tipoUnidad)
+        setNuevoTipoUnidadNombre('')
+        setValorUnidad(String(insumoEncontrado.valorUnidad ?? 1))
         setStockActual(String(insumoEncontrado.stockActual ?? 0))
         setStockMinimo(String(insumoEncontrado.stockMinimo ?? 0))
         setStockMinimoDiario(String(insumoEncontrado.stockMinimoDiario ?? 0))
@@ -95,26 +130,25 @@ export function InsumoForm({
     setError(null)
     setExito(null)
 
-    const nombreFinal = esNuevo ? nombreNuevo.trim() : nombreSeleccionado.trim()
+    const nombreFinal = esNuevo ? nombreNuevo.trim() : (insumoSeleccionado?.nombre ?? '').trim()
     if (!nombreFinal) {
       setError('Escribe o selecciona el nombre del insumo.')
       return
     }
 
-    if (esNuevo) {
-      const yaExiste = insumosExistentes.some(
-        (i) => i.nombre.trim().toLowerCase() === nombreFinal.toLowerCase(),
-      )
-      if (yaExiste) {
-        setError(
-          `Ya existe un insumo llamado "${nombreFinal}". Selecciónalo de la lista desplegable si deseas editarlo o restockearlo.`,
-        )
-        return
-      }
-    }
-
     if (tipoSeleccionado === '__nuevo__' && nuevoTipoNombre.trim() === '') {
       setError('Escribe el nombre del nuevo tipo de insumo.')
+      return
+    }
+
+    if (tipoUnidadSeleccionado === '__nuevo__' && nuevoTipoUnidadNombre.trim() === '') {
+      setError('Escribe el nombre del nuevo tipo de unidad.')
+      return
+    }
+
+    const valorUnidadNum = Number(valorUnidad)
+    if (!Number.isFinite(valorUnidadNum) || valorUnidadNum <= 0) {
+      setError('El valor de unidad debe ser un número mayor que cero.')
       return
     }
 
@@ -126,15 +160,7 @@ export function InsumoForm({
     let categoriaVasoFinal: CategoriaVasoInsumo | null = null
     let detalleTipo = 'Otro'
 
-    if (tipoSeleccionado === 'vaso_granizado') {
-      tipoFinal = 'vaso'
-      categoriaVasoFinal = 'granizado'
-      detalleTipo = 'Vaso Granizado'
-    } else if (tipoSeleccionado === 'vaso_ceviche') {
-      tipoFinal = 'vaso'
-      categoriaVasoFinal = 'ceviche'
-      detalleTipo = 'Vaso Ceviche/Cóctel'
-    } else if (tipoSeleccionado === '__nuevo__') {
+    if (tipoSeleccionado === '__nuevo__') {
       tipoFinal = nuevoTipoNombre.trim()
       categoriaVasoFinal = null
       detalleTipo = nuevoTipoNombre.trim()
@@ -148,10 +174,36 @@ export function InsumoForm({
       detalleTipo = tipoSeleccionado
     }
 
+    const tipoUnidadFinal = (tipoUnidadSeleccionado === '__nuevo__' ? nuevoTipoUnidadNombre : tipoUnidadSeleccionado)
+      .trim()
+      .toLowerCase()
+    const etiquetaUnidadFinal = formatearUnidad(tipoUnidadFinal, valorUnidadNum)
+
+    if (esNuevo) {
+      // Unicidad real: nombre + tipo + tipo de unidad + valor de unidad
+      // (misma materia prima puede tener presentaciones distintas, ej.
+      // "Limón"/fruta en 1kg y "Limón"/fruta en 1unidad — deben poder
+      // coexistir). Refleja el constraint
+      // `insumos_nombre_tipo_tipounidad_valorunidad_key` de la BD.
+      const yaExiste = insumosExistentes.some(
+        (i) =>
+          i.nombre.trim().toLowerCase() === nombreFinal.toLowerCase() &&
+          i.tipo === tipoFinal &&
+          i.tipoUnidad.trim().toLowerCase() === tipoUnidadFinal &&
+          i.valorUnidad === valorUnidadNum,
+      )
+      if (yaExiste) {
+        setError(
+          `Ya existe un insumo "${nombreFinal}" de tipo "${detalleTipo}" en unidad "${etiquetaUnidadFinal}". Selecciónalo de la lista desplegable si deseas editarlo o restockearlo, o cambia el tipo/valor de unidad si es una presentación distinta.`,
+        )
+        return
+      }
+    }
+
     const accionTexto = esNuevo ? 'Crear insumo' : 'Actualizar insumo'
     const ok = await confirmar({
       titulo: accionTexto,
-      mensaje: `¿Confirmas ${esNuevo ? 'crear' : 'actualizar'} el insumo "${nombreFinal}" (Tipo: ${detalleTipo}, unidad: ${unidadMedida}, stock actual: ${stockActualNum}, mín. general: ${stockMinimoNum}, mín. diario: ${stockMinimoDiarioNum})?`,
+      mensaje: `¿Confirmas ${esNuevo ? 'crear' : 'actualizar'} el insumo "${nombreFinal}" (Tipo: ${detalleTipo}, unidad: ${etiquetaUnidadFinal}, stock actual: ${stockActualNum}, mín. general: ${stockMinimoNum}, mín. diario: ${stockMinimoDiarioNum})?`,
       textoConfirmar: accionTexto,
     })
     if (!ok) return
@@ -163,45 +215,47 @@ export function InsumoForm({
           nombre: nombreFinal,
           tipo: tipoFinal,
           categoriaVaso: categoriaVasoFinal,
-          unidadMedida: unidadMedida.trim(),
+          tipoUnidad: tipoUnidadFinal,
+          valorUnidad: valorUnidadNum,
           stockActual: stockActualNum,
           stockMinimo: stockMinimoNum,
           stockMinimoDiario: stockMinimoDiarioNum,
         })
         setNombreNuevo('')
-        setNombreSeleccionado('__nuevo__')
+        setInsumoSeleccionadoId('__nuevo__')
         setTipoSeleccionado('otro')
         setNuevoTipoNombre('')
-        setUnidadMedida('unidad')
+        setTipoUnidadSeleccionado('unidad')
+        setNuevoTipoUnidadNombre('')
+        setValorUnidad('1')
         setStockActual('0')
         setStockMinimo('0')
         setStockMinimoDiario('0')
         setExito(`¡Insumo "${nombreFinal}" creado exitosamente!`)
+      } else if (insumoSeleccionado && onActualizar) {
+        await onActualizar(insumoSeleccionado.id, {
+          nombre: nombreFinal,
+          tipo: tipoFinal,
+          categoriaVaso: categoriaVasoFinal,
+          tipoUnidad: tipoUnidadFinal,
+          valorUnidad: valorUnidadNum,
+          stockActual: stockActualNum,
+          stockMinimo: stockMinimoNum,
+          stockMinimoDiario: stockMinimoDiarioNum,
+        })
+        setExito(`¡Insumo "${nombreFinal}" actualizado exitosamente!`)
       } else {
-        const insumoExistente = insumosExistentes.find((i) => i.nombre === nombreFinal)
-        if (insumoExistente && onActualizar) {
-          await onActualizar(insumoExistente.id, {
-            nombre: nombreFinal,
-            tipo: tipoFinal,
-            categoriaVaso: categoriaVasoFinal,
-            unidadMedida: unidadMedida.trim(),
-            stockActual: stockActualNum,
-            stockMinimo: stockMinimoNum,
-            stockMinimoDiario: stockMinimoDiarioNum,
-          })
-          setExito(`¡Insumo "${nombreFinal}" actualizado exitosamente!`)
-        } else {
-          await onCrear({
-            nombre: nombreFinal,
-            tipo: tipoFinal,
-            categoriaVaso: categoriaVasoFinal,
-            unidadMedida: unidadMedida.trim(),
-            stockActual: stockActualNum,
-            stockMinimo: stockMinimoNum,
-            stockMinimoDiario: stockMinimoDiarioNum,
-          })
-          setExito(`¡Insumo "${nombreFinal}" guardado exitosamente!`)
-        }
+        await onCrear({
+          nombre: nombreFinal,
+          tipo: tipoFinal,
+          categoriaVaso: categoriaVasoFinal,
+          tipoUnidad: tipoUnidadFinal,
+          valorUnidad: valorUnidadNum,
+          stockActual: stockActualNum,
+          stockMinimo: stockMinimoNum,
+          stockMinimoDiario: stockMinimoDiarioNum,
+        })
+        setExito(`¡Insumo "${nombreFinal}" guardado exitosamente!`)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el insumo.')
@@ -223,7 +277,9 @@ export function InsumoForm({
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>
-            {esNuevo ? 'Nuevo Insumo' : `Editar / Restock Insumo: ${nombreSeleccionado}`}
+            {esNuevo
+              ? 'Nuevo Insumo'
+              : `Editar / Restock Insumo: ${insumoSeleccionado?.nombre ?? ''}`}
           </h3>
           {!esNuevo && (
             <button
@@ -250,7 +306,7 @@ export function InsumoForm({
           <Select
             label="Nombre del insumo"
             id="nombre_select"
-            value={nombreSeleccionado}
+            value={insumoSeleccionadoId}
             onChange={(e) => handleCambioNombreSeleccionado(e.target.value)}
             options={opcionesNombre}
             containerStyle={{ marginBottom: 0 }}
@@ -296,12 +352,38 @@ export function InsumoForm({
             />
           )}
 
+          <Select
+            label="Tipo de unidad"
+            id="tipo_unidad"
+            value={tipoUnidadSeleccionado}
+            onChange={(e) => setTipoUnidadSeleccionado(e.target.value)}
+            options={opcionesTipoUnidad}
+            containerStyle={{ marginBottom: 0 }}
+            labelStyle={labelUniformeStyle}
+          />
+
+          {tipoUnidadSeleccionado === '__nuevo__' && (
+            <Input
+              label="Nombre del nuevo tipo de unidad"
+              id="nuevo_tipo_unidad_nombre"
+              value={nuevoTipoUnidadNombre}
+              onChange={(e) => setNuevoTipoUnidadNombre(e.target.value)}
+              placeholder="Ej: cc, docena..."
+              required
+              containerStyle={{ marginBottom: 0 }}
+              labelStyle={labelUniformeStyle}
+            />
+          )}
+
           <Input
-            label="Unidad de medida"
-            id="unidad_medida"
-            value={unidadMedida}
-            onChange={(e) => setUnidadMedida(e.target.value)}
-            placeholder="unidad, gramo, kg..."
+            label="Valor de unidad"
+            id="valor_unidad"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={valorUnidad}
+            onChange={(e) => setValorUnidad(e.target.value)}
+            placeholder="Ej: 9, 400, 1..."
             required
             containerStyle={{ marginBottom: 0 }}
             labelStyle={labelUniformeStyle}

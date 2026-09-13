@@ -35,10 +35,10 @@ export function ConteoInventarioDiarioForm({
   const alertaMinimo = (() => {
     if (!insumoSeleccionado || cantidad.trim() === '' || !Number.isFinite(cantidadNum)) return null
     if (insumoSeleccionado.stockMinimoDiario > 0 && cantidadNum <= insumoSeleccionado.stockMinimoDiario) {
-      return `⚠️ Atención: La cantidad contada (${cantidadNum}) está en o por debajo del mínimo diario (${insumoSeleccionado.stockMinimoDiario} ${insumoSeleccionado.unidadMedida}).`
+      return `Atención: La cantidad contada (${cantidadNum}) está en o por debajo del mínimo diario (${insumoSeleccionado.stockMinimoDiario} ${insumoSeleccionado.unidadMedida}).`
     }
     if (insumoSeleccionado.stockMinimo > 0 && cantidadNum <= insumoSeleccionado.stockMinimo) {
-      return `ℹ️ Nota: La cantidad contada (${cantidadNum}) está en o por debajo del mínimo general de almacén (${insumoSeleccionado.stockMinimo} ${insumoSeleccionado.unidadMedida}).`
+      return `Nota: La cantidad contada (${cantidadNum}) está en o por debajo del mínimo general de almacén (${insumoSeleccionado.stockMinimo} ${insumoSeleccionado.unidadMedida}).`
     }
     return null
   })()
@@ -134,7 +134,7 @@ export function ConteoInventarioDiarioForm({
                 transition: 'all 0.15s ease',
               }}
             >
-              <span style={{ fontSize: 16 }}>☀️</span> Conteo de Apertura (Inicio)
+              Apertura
             </button>
 
             <button
@@ -158,7 +158,7 @@ export function ConteoInventarioDiarioForm({
                 transition: 'all 0.15s ease',
               }}
             >
-              <span style={{ fontSize: 16 }}>🌙</span> Conteo de Cierre (Fin de Jornada)
+              Cierre
             </button>
           </div>
         </div>

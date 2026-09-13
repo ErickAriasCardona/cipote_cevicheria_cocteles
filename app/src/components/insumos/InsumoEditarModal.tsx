@@ -4,10 +4,12 @@ import type { ActualizarInsumoInput, CategoriaVasoInsumo, Insumo, TipoInsumo } f
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
+import { TIPOS_UNIDAD_PRESET } from '../../utils/unidadMedida'
 
 interface InsumoEditarModalProps {
   insumo: Insumo | null
   tiposPersonalizados?: string[]
+  tiposUnidadPersonalizados?: string[]
   abierto: boolean
   onCerrar: () => void
   onGuardar: (id: string, cambios: ActualizarInsumoInput) => Promise<void>
@@ -16,6 +18,7 @@ interface InsumoEditarModalProps {
 export function InsumoEditarModal({
   insumo,
   tiposPersonalizados = [],
+  tiposUnidadPersonalizados = [],
   abierto,
   onCerrar,
   onGuardar,
@@ -23,7 +26,9 @@ export function InsumoEditarModal({
   const [nombre, setNombre] = useState('')
   const [tipoSeleccionado, setTipoSeleccionado] = useState('otro')
   const [nuevoTipoNombre, setNuevoTipoNombre] = useState('')
-  const [unidadMedida, setUnidadMedida] = useState('unidad')
+  const [tipoUnidadSeleccionado, setTipoUnidadSeleccionado] = useState('unidad')
+  const [nuevoTipoUnidadNombre, setNuevoTipoUnidadNombre] = useState('')
+  const [valorUnidad, setValorUnidad] = useState('1')
   const [stockActual, setStockActual] = useState('0')
   const [stockMinimo, setStockMinimo] = useState('0')
   const [stockMinimoDiario, setStockMinimoDiario] = useState('0')
@@ -32,27 +37,34 @@ export function InsumoEditarModal({
   const cancelarRef = useRef<HTMLButtonElement>(null)
 
   const opcionesTipo = [
-    { value: 'vaso_granizado', label: 'Vaso Granizado' },
-    { value: 'vaso_ceviche', label: 'Vaso Ceviche/Cóctel' },
     { value: 'otro', label: 'Otro' },
     ...tiposPersonalizados.map((t) => ({ value: t, label: t })),
     { value: '__nuevo__', label: '+ Agregar nuevo tipo...' },
   ]
 
+  const opcionesTipoUnidad = [
+    ...TIPOS_UNIDAD_PRESET,
+    ...tiposUnidadPersonalizados
+      .filter((t) => !TIPOS_UNIDAD_PRESET.some((preset) => preset.value === t))
+      .map((t) => ({ value: t, label: t })),
+    { value: '__nuevo__', label: '+ Agregar nuevo tipo de unidad...' },
+  ]
+
   useEffect(() => {
     if (insumo) {
       setNombre(insumo.nombre)
-      if (insumo.tipo === 'vaso' && insumo.categoriaVaso === 'granizado') {
-        setTipoSeleccionado('vaso_granizado')
-      } else if (insumo.tipo === 'vaso') {
-        setTipoSeleccionado('vaso_ceviche')
-      } else if (insumo.tipo === 'otro') {
+      // Nota: ver comentario equivalente en InsumoForm.tsx sobre el mecanismo
+      // legado `tipo:'vaso'` — se preserva el valor tal cual si no se toca
+      // este campo al guardar.
+      if (insumo.tipo === 'otro') {
         setTipoSeleccionado('otro')
       } else {
         setTipoSeleccionado(insumo.tipo)
       }
       setNuevoTipoNombre('')
-      setUnidadMedida(insumo.unidadMedida)
+      setTipoUnidadSeleccionado(insumo.tipoUnidad)
+      setNuevoTipoUnidadNombre('')
+      setValorUnidad(String(insumo.valorUnidad ?? 1))
       setStockActual(String(insumo.stockActual ?? 0))
       setStockMinimo(String(insumo.stockMinimo ?? 0))
       setStockMinimoDiario(String(insumo.stockMinimoDiario ?? 0))
@@ -85,6 +97,17 @@ export function InsumoEditarModal({
       return
     }
 
+    if (tipoUnidadSeleccionado === '__nuevo__' && nuevoTipoUnidadNombre.trim() === '') {
+      setError('Escribe el nombre del nuevo tipo de unidad.')
+      return
+    }
+
+    const valorUnidadNum = Number(valorUnidad)
+    if (!Number.isFinite(valorUnidadNum) || valorUnidadNum <= 0) {
+      setError('El valor de unidad debe ser un número mayor que cero.')
+      return
+    }
+
     const stockActualNum = Number(stockActual)
     const stockMinimoNum = Number(stockMinimo)
     const stockMinimoDiarioNum = Number(stockMinimoDiario)
@@ -105,13 +128,7 @@ export function InsumoEditarModal({
     let tipoFinal: TipoInsumo = 'otro'
     let categoriaVasoFinal: CategoriaVasoInsumo | null = null
 
-    if (tipoSeleccionado === 'vaso_granizado') {
-      tipoFinal = 'vaso'
-      categoriaVasoFinal = 'granizado'
-    } else if (tipoSeleccionado === 'vaso_ceviche') {
-      tipoFinal = 'vaso'
-      categoriaVasoFinal = 'ceviche'
-    } else if (tipoSeleccionado === '__nuevo__') {
+    if (tipoSeleccionado === '__nuevo__') {
       tipoFinal = nuevoTipoNombre.trim()
       categoriaVasoFinal = null
     } else if (tipoSeleccionado === 'otro') {
@@ -122,13 +139,18 @@ export function InsumoEditarModal({
       categoriaVasoFinal = null
     }
 
+    const tipoUnidadFinal = (tipoUnidadSeleccionado === '__nuevo__' ? nuevoTipoUnidadNombre : tipoUnidadSeleccionado)
+      .trim()
+      .toLowerCase()
+
     setGuardando(true)
     try {
       await onGuardar(insumo.id, {
         nombre: nombre.trim(),
         tipo: tipoFinal,
         categoriaVaso: categoriaVasoFinal,
-        unidadMedida: unidadMedida.trim(),
+        tipoUnidad: tipoUnidadFinal,
+        valorUnidad: valorUnidadNum,
         stockActual: stockActualNum,
         stockMinimo: stockMinimoNum,
         stockMinimoDiario: stockMinimoDiarioNum,
@@ -217,11 +239,33 @@ export function InsumoEditarModal({
             />
           )}
 
+          <Select
+            label="Tipo de unidad"
+            id="edit_tipo_unidad"
+            value={tipoUnidadSeleccionado}
+            onChange={(e) => setTipoUnidadSeleccionado(e.target.value)}
+            options={opcionesTipoUnidad}
+          />
+
+          {tipoUnidadSeleccionado === '__nuevo__' && (
+            <Input
+              label="Nombre del nuevo tipo de unidad"
+              id="edit_nuevo_tipo_unidad_nombre"
+              value={nuevoTipoUnidadNombre}
+              onChange={(e) => setNuevoTipoUnidadNombre(e.target.value)}
+              placeholder="Ej: cc, docena..."
+              required
+            />
+          )}
+
           <Input
-            label="Unidad de medida"
-            id="edit_unidad_medida"
-            value={unidadMedida}
-            onChange={(e) => setUnidadMedida(e.target.value)}
+            label="Valor de unidad"
+            id="edit_valor_unidad"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={valorUnidad}
+            onChange={(e) => setValorUnidad(e.target.value)}
             required
           />
 

@@ -65,7 +65,14 @@ export const productosService = {
       })
       .select(COLUMNAS)
       .single()
-    if (error) throw error
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error(
+          `No se puede crear el producto: ya existe uno con el nombre "${input.nombre}". Usa un nombre distinto o edita el producto existente.`,
+        )
+      }
+      throw error
+    }
     return mapRow(data as ProductoRow)
   },
 
@@ -83,7 +90,14 @@ export const productosService = {
       .eq('id', id)
       .select(COLUMNAS)
       .single()
-    if (error) throw error
+    if (error) {
+      if (error.code === '23505') {
+        throw new Error(
+          `No se puede actualizar el producto: ya existe uno con el nombre "${cambios.nombre}". Usa un nombre distinto o edita el producto existente.`,
+        )
+      }
+      throw error
+    }
     return mapRow(data as ProductoRow)
   },
 

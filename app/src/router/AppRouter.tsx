@@ -61,7 +61,7 @@ export function AppRouter() {
         }
       />
       <Route
-        path="/administrador/insumos"
+        path="/administrador/inventario"
         element={
           <AuthGuard>
             <RoleGuard rolesPermitidos={['administrador']}>

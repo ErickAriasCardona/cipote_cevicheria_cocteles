@@ -7,6 +7,7 @@ import { GlassCard } from '../components/ui/GlassCard'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 import { useTheme } from '../theme/useTheme'
+import { IconoLuna, IconoSol } from '../components/ui/IconoTema'
 
 /**
  * Formulario de inicio de sesión (BD-01.4).
@@ -138,7 +139,7 @@ export function LoginPage() {
             boxShadow: 'inset 0 1px 0 var(--pill-highlight)',
           }}
         >
-          {theme === 'light' ? '☾' : '☀'}
+          {theme === 'light' ? <IconoLuna /> : <IconoSol />}
         </button>
       </div>
 

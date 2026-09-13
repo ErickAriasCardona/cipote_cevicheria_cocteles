@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { UsuarioForm } from '../../components/usuarios/UsuarioForm'
+import { UsuarioCrearModal } from '../../components/usuarios/UsuarioCrearModal'
 import { UsuariosTable } from '../../components/usuarios/UsuariosTable'
 import { useSession } from '../../hooks/useSession'
 import { usuariosService } from '../../services/usuariosService'
@@ -18,6 +18,7 @@ export function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioPerfil[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mostrarCrearUsuario, setMostrarCrearUsuario] = useState(false)
 
   const cargarUsuarios = useCallback(async () => {
     setCargando(true)
@@ -82,8 +83,6 @@ export function UsuariosPage() {
           </p>
         </div>
 
-        <UsuarioForm onCrear={handleCrear} />
-
         {error && (
           <GlassCard tint="red" padding={16}>
             <p role="alert" style={{ margin: 0, color: 'var(--brand-red)', fontSize: 13.5, fontWeight: 600 }}>
@@ -93,9 +92,36 @@ export function UsuariosPage() {
         )}
 
         <GlassCard padding={20}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 700 }}>
-            Usuarios Registrados
-          </h3>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              marginBottom: 16,
+            }}
+          >
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Usuarios Registrados</h3>
+            <button
+              type="button"
+              onClick={() => setMostrarCrearUsuario(true)}
+              title="Nuevo usuario"
+              style={{
+                background: 'rgba(65, 175, 224, 0.12)',
+                border: '1px solid rgba(65, 175, 224, 0.3)',
+                color: 'var(--brand-blue)',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: '6px 12px',
+                borderRadius: 8,
+                transition: 'all 0.15s ease',
+                flexShrink: 0,
+              }}
+            >
+              + Nuevo usuario
+            </button>
+          </div>
           {cargando ? (
             <p style={{ color: 'var(--text-secondary)', fontSize: 13.5 }}>Cargando usuarios…</p>
           ) : (
@@ -108,6 +134,12 @@ export function UsuariosPage() {
             />
           )}
         </GlassCard>
+
+        <UsuarioCrearModal
+          abierto={mostrarCrearUsuario}
+          onCerrar={() => setMostrarCrearUsuario(false)}
+          onCrear={handleCrear}
+        />
       </div>
     </AppShell>
   )

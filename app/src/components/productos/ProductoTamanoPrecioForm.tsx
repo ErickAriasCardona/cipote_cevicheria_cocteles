@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import type { CrearProductoTamanoPrecioInput } from '../../types/productoTamanoPrecio'
-import type { TamanoVaso } from '../../types/tamanoVaso'
+import type { ComboTamanoPrecioInput } from '../../types/productoTamanoPrecio'
+import type { ComboUnidad } from '../../utils/unidadMedida'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
@@ -10,25 +10,36 @@ import { Select } from '../ui/Select'
 interface ProductoTamanoPrecioFormProps {
   productoId: string
   nombreProducto: string
-  tamanosDisponibles: TamanoVaso[]
-  onCrear: (input: CrearProductoTamanoPrecioInput) => Promise<void>
+  /** Combinaciones (tipoUnidad, valorUnidad) todavía no configuradas para
+   * este producto, derivadas en vivo de `insumos` para la categoría del
+   * producto (ver `utils/unidadMedida.combosUnidadPorCategoria` y
+   * `ProductosTable.obtenerCombosDisponibles`). */
+  combosDisponibles: ComboUnidad[]
+  onCrear: (input: ComboTamanoPrecioInput) => Promise<void>
+}
+
+function claveCombo(combo: { tipoUnidad: string; valorUnidad: number }): string {
+  return `${combo.tipoUnidad}|${combo.valorUnidad}`
 }
 
 export function ProductoTamanoPrecioForm({
   productoId,
   nombreProducto,
-  tamanosDisponibles,
+  combosDisponibles,
   onCrear,
 }: ProductoTamanoPrecioFormProps) {
-  const [tamanoVasoId, setTamanoVasoId] = useState(tamanosDisponibles[0]?.id ?? '')
+  const [claveSeleccionada, setClaveSeleccionada] = useState(
+    combosDisponibles[0] ? claveCombo(combosDisponibles[0]) : '',
+  )
   const [precio, setPrecio] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { confirmar } = useConfirmacion()
 
-  const idSeleccionado = tamanosDisponibles.some((t) => t.id === tamanoVasoId)
-    ? tamanoVasoId
-    : tamanosDisponibles[0]?.id ?? ''
+  const claveActual = combosDisponibles.some((c) => claveCombo(c) === claveSeleccionada)
+    ? claveSeleccionada
+    : (combosDisponibles[0] ? claveCombo(combosDisponibles[0]) : '')
+  const comboSeleccionado = combosDisponibles.find((c) => claveCombo(c) === claveActual)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -38,20 +49,25 @@ export function ProductoTamanoPrecioForm({
       setError('El precio debe ser un número mayor que cero.')
       return
     }
-    const tamano = tamanosDisponibles.find((t) => t.id === idSeleccionado)
+    if (!comboSeleccionado) return
     const ok = await confirmar({
       titulo: 'Agregar presentación',
-      mensaje: `¿Confirmas agregar el tamaño "${tamano?.etiqueta ?? idSeleccionado}" con precio $${precioNumerico.toFixed(2)} a "${nombreProducto}"?`,
+      mensaje: `¿Confirmas agregar el tamaño "${comboSeleccionado.etiqueta}" con precio $${precioNumerico.toFixed(2)} a "${nombreProducto}"?`,
       textoConfirmar: 'Agregar',
       varianteConfirmar: 'blue',
     })
     if (!ok) return
     setEnviando(true)
     try {
-      await onCrear({ productoId, tamanoVasoId: idSeleccionado, precio: precioNumerico })
+      await onCrear({
+        productoId,
+        tipoUnidad: comboSeleccionado.tipoUnidad,
+        valorUnidad: comboSeleccionado.valorUnidad,
+        precio: precioNumerico,
+      })
       setPrecio('')
-      const siguiente = tamanosDisponibles.find((t) => t.id !== idSeleccionado)
-      if (siguiente) setTamanoVasoId(siguiente.id)
+      const siguiente = combosDisponibles.find((c) => claveCombo(c) !== claveActual)
+      if (siguiente) setClaveSeleccionada(claveCombo(siguiente))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar el tamaño y precio.')
     } finally {
@@ -59,7 +75,7 @@ export function ProductoTamanoPrecioForm({
     }
   }
 
-  if (tamanosDisponibles.length === 0) {
+  if (combosDisponibles.length === 0) {
     return (
       <div
         style={{
@@ -86,7 +102,11 @@ export function ProductoTamanoPrecioForm({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    // form-add-row-container: establece el contexto de Container Query que
+    // usa .form-add-row en index.css (ver comentario ahí) para decidir según
+    // el ancho real disponible, no el de la ventana, si el botón cabe en la
+    // misma fila o pasa a ocupar el ancho completo debajo.
+    <div className="form-add-row-container" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div>
         <h5 style={{ margin: '0 0 2px', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
           + Agregar presentación
@@ -102,29 +122,21 @@ export function ProductoTamanoPrecioForm({
         </p>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          alignItems: 'flex-end',
-        }}
-      >
-        <div style={{ flex: '1 1 200px', minWidth: 160 }}>
+      <form onSubmit={handleSubmit} className="form-add-row">
+        <div className="form-add-row-field">
           <Select
             label="Tamaño o presentación"
-            id="ptp_tamano_vaso_id"
-            value={idSeleccionado}
-            onChange={(e) => setTamanoVasoId(e.target.value)}
-            options={tamanosDisponibles.map((tamano) => ({
-              value: tamano.id,
-              label: tamano.etiqueta,
+            id="ptp_combo_unidad"
+            value={claveActual}
+            onChange={(e) => setClaveSeleccionada(e.target.value)}
+            options={combosDisponibles.map((combo) => ({
+              value: claveCombo(combo),
+              label: combo.etiqueta,
             }))}
           />
         </div>
 
-        <div style={{ width: 170 }}>
+        <div className="form-add-row-field form-add-row-field--narrow-lg">
           <Input
             label="Precio de venta ($)"
             id="ptp_precio"
@@ -141,7 +153,8 @@ export function ProductoTamanoPrecioForm({
         <Button
           type="submit"
           variant="blue"
-          disabled={enviando || !idSeleccionado || !precio}
+          disabled={enviando || !claveActual || !precio}
+          className="form-add-row-btn"
           style={{ height: 42, borderRadius: 10, padding: '0 20px', fontWeight: 700, whiteSpace: 'nowrap' }}
         >
           {enviando ? 'Guardando…' : '+ Agregar presentación'}

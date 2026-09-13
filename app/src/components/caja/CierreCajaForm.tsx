@@ -91,7 +91,11 @@ export function CierreCajaForm({ tamanosVaso, transferencias = [], onCerrar }: C
   }
 
   return (
-    <GlassCard style={{ maxWidth: 580, margin: '0 auto', padding: '36px 36px' }}>
+    // Ticket responsive 2026-09-12 (tarea 3): padding fijo de 36px por lado
+    // dejaba muy poco ancho útil en mobile angosto (~375px), al punto de
+    // apretar la tabla de conteo de vasos contra el borde. clamp() reduce el
+    // padding de forma continua en pantallas angostas sin afectar desktop.
+    <GlassCard style={{ maxWidth: 580, margin: '0 auto', padding: 'clamp(16px, 5vw, 36px)' }}>
       <h2
         style={{
           margin: '0 0 20px',
@@ -118,7 +122,6 @@ export function CierreCajaForm({ tamanosVaso, transferencias = [], onCerrar }: C
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16 }}>⚠️</span>
             <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
               Tienes {pendientes.length} transferencia(s) pendiente(s) por confirmar ($
               {totalMontoPendiente.toLocaleString('es-CO')})

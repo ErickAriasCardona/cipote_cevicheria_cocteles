@@ -213,6 +213,49 @@ a:hover {
   }
 }
 
+/* Navbar unificado (AppShell), historial pre-hamburguesa: en desktop (>1024px,
+ver breakpoint de .navbar-desktop-content más abajo), si el bloque de marca +
+usuario + tabs llegara a apretarse mucho, el rol del usuario cede espacio
+primero para que el navbar-name-col se angoste y trunque con ellipsis antes
+que forzar un wrap a segunda fila (requisito de Erick, ticket 2026-09-12).
+Por debajo de 1024px esta regla ya no aplica en la práctica porque todo ese
+bloque (incluido navbar-user-role) queda oculto por .navbar-desktop-content. */
+@media (max-width: 480px) {
+  .navbar-user-role {
+    display: none;
+  }
+}
+
+/* Navbar unificado (AppShell) -- ticket responsive 2026-09-12, tarea 1.
+   En tablet y mobile (<=1024px) el navbar deja de mostrar tabs, usuario,
+   logout y toggle de tema en la barra, Y también se oculta el texto de marca
+   junto al logo -- en la barra solo quedan visibles el logo (ícono) y el
+   botón de hamburguesa, que abre <NavDrawer/> con todo lo demás organizado
+   verticalmente. En desktop (>1024px) el navbar se mantiene exactamente
+   igual que antes: logo + texto de marca + tabs + usuario + logout + tema,
+   todo en una sola fila sin wrap. */
+.navbar-desktop-content {
+  display: flex;
+}
+
+.navbar-hamburger-btn {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .navbar-brand-text {
+    display: none;
+  }
+
+  .navbar-desktop-content {
+    display: none;
+  }
+
+  .navbar-hamburger-btn {
+    display: flex;
+  }
+}
+
 /* Layout adaptativo para gestión de productos */
 .productos-layout-grid {
   display: grid;
@@ -223,7 +266,17 @@ a:hover {
 
 @media (max-width: 1080px) {
   .productos-layout-grid {
-    grid-template-columns: 1fr;
+    /* Ticket responsive 2026-09-12 (tarea 3): "1fr" a secas usa un mínimo
+    implícito "auto" (= min-content del contenido), así que si algo adentro
+    de ProductoForm no se encoge más allá de cierto ancho (ej. la fila de
+    categoría o el grid interno de "Tamaños de Vaso y Precios"), esa columna
+    -- y con ella toda la tarjeta -- se ensanchaba más allá del ancho real
+    disponible en tablet/mobile, desbordando en silencio por el
+    overflowX:hidden del AppShell (texto y chips cortados sin scrollbar
+    visible). minmax(0, 1fr) fuerza un mínimo de 0 para que la columna
+    respete el ancho real disponible y el contenido interno se encoja/apile
+    en su lugar. */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -495,5 +548,79 @@ a:hover {
 }
 .custom-select-menu::-webkit-scrollbar-thumb:hover {
   background: rgba(65, 175, 224, 0.55);
+}
+
+/* ========================================================
+   Fila reutilizable "selector/input + botón agregar"
+   (ticket responsive 2026-09-12, tarea 2: ProductoForm.tsx,
+   ProductoTamanoPrecioForm.tsx, ProductosTable.tsx). En desktop se ven en
+   una sola fila con alignItems: flex-end (botón a la misma altura que los
+   inputs). Antes, cuando la fila no cabía completa, flexWrap dejaba el
+   botón "descolgado" en su propia línea pero sin ocupar el ancho completo
+   ni alinearse con nada.
+
+   OJO: el ancho disponible para esta fila NO depende solo del ancho de la
+   ventana -- ProductoForm vive en la columna izquierda angosta de
+   `.productos-layout-grid` (minmax(360px, 440px) en desktop, pero ancho
+   completo de la página cuando ese grid colapsa a 1 columna en tablet). Por
+   eso se usa una Container Query (container-type: inline-size en el
+   contenedor padre, ver `.form-add-row-container`) en vez de un @media por
+   viewport: lo que importa es el ancho real disponible para ESTA fila, sea
+   cual sea el motivo (columna angosta en desktop o pantalla angosta en
+   mobile). Por debajo de ese ancho, en vez del wrap a medias, se apila todo
+   en columna y el botón pasa a ocupar el 100% del ancho. */
+.form-add-row-container {
+  container-type: inline-size;
+}
+
+.form-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.form-add-row-field {
+  flex: 1 1 150px;
+  min-width: 0;
+}
+
+.form-add-row-btn {
+  flex: 0 0 auto;
+}
+
+/* Variante angosta para campos cortos (ej. "Precio ($)") que en desktop no
+   deben crecer tanto como el selector principal de la fila. */
+.form-add-row-field--narrow {
+  flex: 0 1 120px;
+  max-width: 140px;
+}
+
+/* Variante un poco más ancha, para campos de precio con más dígitos
+   (ProductoTamanoPrecioForm.tsx). */
+.form-add-row-field--narrow-lg {
+  flex: 0 1 150px;
+  max-width: 180px;
+}
+
+@container (max-width: 480px) {
+  .form-add-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .form-add-row-field {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .form-add-row-field--narrow,
+  .form-add-row-field--narrow-lg {
+    max-width: none;
+  }
+
+  .form-add-row-btn {
+    width: 100%;
+  }
 }
 

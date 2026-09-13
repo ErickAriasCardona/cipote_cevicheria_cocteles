@@ -4,13 +4,16 @@ import { ProductosTable } from '../../components/productos/ProductosTable'
 import { productoTamanoPrecioService } from '../../services/productoTamanoPrecioService'
 import { productosService } from '../../services/productosService'
 import { ventasService } from '../../services/ventasService'
+import { insumosService } from '../../services/insumosService'
+import { tamanoVasoService } from '../../services/tamanoVasoService'
 import type { CrearProductoInput, Producto } from '../../types/producto'
 import type {
-  CrearProductoTamanoPrecioInput,
+  ComboTamanoPrecioInput,
   NuevoTamanoPrecioInput,
   ProductoTamanoPrecio,
 } from '../../types/productoTamanoPrecio'
-import type { TamanoVaso } from '../../types/tamanoVaso'
+import type { TamanoVaso, CategoriaTamanoVaso } from '../../types/tamanoVaso'
+import type { Insumo } from '../../types/insumo'
 import { AppShell } from '../../components/layout/AppShell'
 import { GlassCard } from '../../components/ui/GlassCard'
 
@@ -20,6 +23,7 @@ import { GlassCard } from '../../components/ui/GlassCard'
 export function ProductosPage() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [tamanosVaso, setTamanosVaso] = useState<TamanoVaso[]>([])
+  const [insumos, setInsumos] = useState<Insumo[]>([])
   const [precios, setPrecios] = useState<ProductoTamanoPrecio[]>([])
   const [productoExpandidoId, setProductoExpandidoId] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
@@ -29,14 +33,16 @@ export function ProductosPage() {
     setCargando(true)
     setError(null)
     try {
-      const [listaProductos, listaTamanosVaso, listaPrecios] = await Promise.all([
+      const [listaProductos, listaTamanosVaso, listaPrecios, listaInsumos] = await Promise.all([
         productosService.listarProductos(),
         ventasService.listarTamanosVasoActivos(),
         productoTamanoPrecioService.listarTodos(),
+        insumosService.listarInsumos(),
       ])
       setProductos(listaProductos)
       setTamanosVaso(listaTamanosVaso)
       setPrecios(listaPrecios)
+      setInsumos(listaInsumos)
       setProductoExpandidoId((actual) => {
         if (actual && listaProductos.some((p) => p.id === actual)) return actual
         // Abrir "E2E Vulcano Coctel" si existe para mostrarlo como ejemplo
@@ -70,10 +76,18 @@ export function ProductosPage() {
   async function handleCrear(input: CrearProductoInput, tamanos: NuevoTamanoPrecioInput[]) {
     const nuevo = await productosService.crearProducto(input)
     if (input.categoria !== 'otro') {
+      // input.categoria ya está acotado a 'ceviche' | 'granizado' | 'bebida'
+      // en esta rama (el branch 'otro' no manda tamaños, ver ProductoForm).
+      const categoria = input.categoria as CategoriaTamanoVaso
       for (const tamano of tamanos) {
+        const tamanoVaso = await tamanoVasoService.resolverOCrear({
+          categoria,
+          tipoUnidad: tamano.tipoUnidad,
+          valorUnidad: tamano.valorUnidad,
+        })
         await productoTamanoPrecioService.crear({
           productoId: nuevo.id,
-          tamanoVasoId: tamano.tamanoVasoId,
+          tamanoVasoId: tamanoVaso.id,
           precio: tamano.precio,
         })
       }
@@ -100,8 +114,19 @@ export function ProductosPage() {
     }
   }
 
-  async function handleCrearTamanoPrecio(input: CrearProductoTamanoPrecioInput) {
-    await productoTamanoPrecioService.crear(input)
+  async function handleCrearTamanoPrecio(input: ComboTamanoPrecioInput) {
+    const producto = productos.find((p) => p.id === input.productoId)
+    if (!producto || producto.categoria === 'otro') return
+    const tamanoVaso = await tamanoVasoService.resolverOCrear({
+      categoria: producto.categoria as CategoriaTamanoVaso,
+      tipoUnidad: input.tipoUnidad,
+      valorUnidad: input.valorUnidad,
+    })
+    await productoTamanoPrecioService.crear({
+      productoId: input.productoId,
+      tamanoVasoId: tamanoVaso.id,
+      precio: input.precio,
+    })
     await cargarDatos()
   }
 
@@ -164,7 +189,13 @@ export function ProductosPage() {
           <div className="productos-layout-grid">
             {/* Columna Izquierda: Formulario Nuevo Producto */}
             <div>
-              <ProductoForm tamanosVaso={tamanosVaso} onCrear={handleCrear} />
+              <ProductoForm
+                insumos={insumos}
+                productos={productos}
+                precios={precios}
+                tamanosVaso={tamanosVaso}
+                onCrear={handleCrear}
+              />
             </div>
 
             {/* Columna Derecha: Catálogo de Productos con Amplitud Optimizada */}
@@ -184,6 +215,7 @@ export function ProductosPage() {
                 onEliminar={handleEliminarProducto}
                 precios={precios}
                 tamanosVaso={tamanosVaso}
+                insumos={insumos}
                 onCrearTamanoPrecio={handleCrearTamanoPrecio}
                 onActualizarPrecioTamano={handleActualizarPrecioTamano}
                 onCambiarActivoTamano={handleCambiarActivoTamano}

@@ -7,6 +7,7 @@ interface InsumosTableProps {
   onCambiarActivo: (id: string, activo: boolean) => void
   onActualizarStockMinimo?: (id: string, stockMinimo: number) => void
   onEditar: (insumo: Insumo) => void
+  onEliminar: (id: string, nombre: string) => Promise<void>
 }
 
 interface FilaInsumoProps {
@@ -14,6 +15,7 @@ interface FilaInsumoProps {
   onCambiarActivo: (insumo: Insumo) => void
   onActualizarStockMinimo?: (id: string, stockMinimo: number) => void
   onEditar: (insumo: Insumo) => void
+  onEliminar: (insumo: Insumo) => void
 }
 
 function IconoPower() {
@@ -34,7 +36,18 @@ function IconoEditar() {
   )
 }
 
-function FilaInsumo({ insumo, onCambiarActivo, onEditar }: FilaInsumoProps) {
+function IconoTrash() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  )
+}
+
+function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsumoProps) {
   const stockActualNum = Number(insumo.stockActual) || 0
   const stockMinimoNum = Number(insumo.stockMinimo) || 0
   const stockMinimoDiarioNum = Number(insumo.stockMinimoDiario) || 0
@@ -154,28 +167,50 @@ function FilaInsumo({ insumo, onCambiarActivo, onEditar }: FilaInsumoProps) {
           <IconoPower />
         </button>
       </td>
-      {/* Columna Acciones: ICONO de editar */}
-      <td style={{ padding: '14px 12px', width: 75 }}>
-        <button
-          type="button"
-          title={`Editar insumo "${insumo.nombre}"`}
-          onClick={() => onEditar(insumo)}
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 8,
-            border: '1px solid var(--input-border)',
-            background: 'var(--input-bg)',
-            color: 'var(--brand-blue)',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.15s ease',
-          }}
-        >
-          <IconoEditar />
-        </button>
+      {/* Columna Acciones: ICONOS de editar y eliminar (eliminar: solo Administrador, ver InsumosPage/router) */}
+      <td style={{ padding: '14px 12px', width: 120 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            type="button"
+            title={`Editar insumo "${insumo.nombre}"`}
+            onClick={() => onEditar(insumo)}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              border: '1px solid var(--input-border)',
+              background: 'var(--input-bg)',
+              color: 'var(--brand-blue)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <IconoEditar />
+          </button>
+          <button
+            type="button"
+            title={`Eliminar insumo "${insumo.nombre}"`}
+            onClick={() => onEliminar(insumo)}
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              background: 'rgba(239, 68, 68, 0.15)',
+              color: '#ef4444',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <IconoTrash />
+          </button>
+        </div>
       </td>
     </tr>
   )
@@ -186,6 +221,7 @@ export function InsumosTable({
   onCambiarActivo,
   onActualizarStockMinimo,
   onEditar,
+  onEliminar,
 }: InsumosTableProps) {
   const { confirmar } = useConfirmacion()
 
@@ -201,6 +237,17 @@ export function InsumosTable({
     })
     if (!ok) return
     onCambiarActivo(insumo.id, siguienteActivo)
+  }
+
+  async function handleEliminar(insumo: Insumo) {
+    const ok = await confirmar({
+      titulo: 'Eliminar insumo',
+      mensaje: `¿Confirmas eliminar permanentemente el insumo "${insumo.nombre}"? Si ya tiene movimientos de inventario, recetas o un tamaño de vaso asociado, la base de datos lo protegerá para no alterar el historial.`,
+      textoConfirmar: 'Eliminar',
+      varianteConfirmar: 'destructive',
+    })
+    if (!ok) return
+    await onEliminar(insumo.id, insumo.nombre)
   }
 
   if (insumos.length === 0) {
@@ -231,7 +278,7 @@ export function InsumosTable({
             <th style={{ padding: '10px 12px', textAlign: 'center', width: 110 }}>Stock actual</th>
             <th style={{ padding: '10px 12px' }}>Gen / Día</th>
             <th style={{ padding: '10px 12px', width: 75 }}>Estado</th>
-            <th style={{ padding: '10px 12px', width: 75 }}>Acciones</th>
+            <th style={{ padding: '10px 12px', width: 120 }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -242,6 +289,7 @@ export function InsumosTable({
               onCambiarActivo={handleCambiarActivo}
               onActualizarStockMinimo={onActualizarStockMinimo}
               onEditar={onEditar}
+              onEliminar={handleEliminar}
             />
           ))}
         </tbody>

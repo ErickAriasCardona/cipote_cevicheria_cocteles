@@ -20,16 +20,36 @@ export interface ProductoTamanoPrecio {
 
 /** Tamaño+precio capturado en el formulario de alta de un producto, antes de
  * que el producto tenga `id` (HU-03.1 CA-01/CA-04): se persiste junto con el
- * producto recién creado, en la misma acción de "Guardar producto". */
+ * producto recién creado, en la misma acción de "Guardar producto".
+ *
+ * Ajuste (ticket post-MVP "Relacionar categoría de producto con tipo de
+ * insumo", 2026-09-12): el borrador ya no identifica el tamaño por
+ * `tamanoVasoId` -- ese id puede no existir todavía, porque las opciones de
+ * tamaño/presentación ahora se derivan en vivo de `insumos` (tipoUnidad +
+ * valorUnidad para el tipo de insumo relacionado a la categoría, ver
+ * `utils/unidadMedida.ts`). La fila de `tamanos_vaso` real se resuelve (o se
+ * crea de una vez si no existe) recién al guardar, vía
+ * `tamanoVasoService.resolverOCrear` -- ver `ProductosPage.tsx`. */
 export interface NuevoTamanoPrecioInput {
-  tamanoVasoId: string
+  tipoUnidad: string
+  valorUnidad: number
   precio: number
 }
 
-/** Payload para agregar un tamaño+precio a un producto ya existente
- * (HU-03.1 CA-02). */
-export interface CrearProductoTamanoPrecioInput extends NuevoTamanoPrecioInput {
+/** Igual que `NuevoTamanoPrecioInput` pero para agregar un tamaño+precio a un
+ * producto YA EXISTENTE (HU-03.1 CA-02): necesita `productoId` para saber a
+ * cuál producto (y su categoría) resolver la fila de `tamanos_vaso`. */
+export interface ComboTamanoPrecioInput extends NuevoTamanoPrecioInput {
   productoId: string
+}
+
+/** Payload final, ya resuelto contra una fila real de `tamanos_vaso`, que
+ * consume `productoTamanoPrecioService.crear` (sin cambios: la tabla
+ * `producto_tamano_precio` sigue referenciando `tamano_vaso_id`, RN-011). */
+export interface CrearProductoTamanoPrecioInput {
+  productoId: string
+  tamanoVasoId: string
+  precio: number
 }
 
 /** Cambios permitidos sobre una combinación producto+tamaño ya existente:

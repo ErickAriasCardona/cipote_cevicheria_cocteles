@@ -2,6 +2,15 @@ import { Link } from 'react-router-dom'
 import { GlassCard } from '../components/ui/GlassCard'
 import { Button } from '../components/ui/Button'
 
+function IconoCandado() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  )
+}
+
 /**
  * Página destino de RoleGuard cuando el rol activo no tiene acceso a la ruta (RN-001/RN-002).
  */
@@ -43,11 +52,11 @@ export function NoAutorizadoPage() {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
-            fontSize: 28,
+            color: 'var(--brand-red)',
             border: '1px solid rgba(228,41,38,0.25)',
           }}
         >
-          🔒
+          <IconoCandado />
         </div>
         <h2 style={{ margin: '0 0 8px', fontSize: 22, fontWeight: 800, color: 'var(--brand-red)' }}>
           Acceso no autorizado

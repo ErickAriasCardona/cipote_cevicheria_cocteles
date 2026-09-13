@@ -240,7 +240,6 @@ export function BalanceTransferenciasCierre({
             color: 'var(--text-primary)',
           }}
         >
-          <span style={{ fontSize: 16 }}>⚠️</span>
           <div>
             <strong>Atención:</strong> En este turno quedaron{' '}
             <strong>{pendientes.length} transferencia(s) pendiente(s)</strong> por un total de{' '}

@@ -16,6 +16,9 @@ interface InsumoRow {
   nombre: string
   tipo: string
   categoria_vaso?: 'ceviche' | 'granizado' | null
+  categoria_producto?: 'ceviche' | 'granizado' | 'bebida' | null
+  tipo_unidad: string
+  valor_unidad: number
   unidad_medida: string
   stock_actual: number
   stock_minimo: number
@@ -25,7 +28,8 @@ interface InsumoRow {
   updated_at: string
 }
 
-const COLUMNAS = 'id, nombre, tipo, categoria_vaso, unidad_medida, stock_actual, stock_minimo, stock_minimo_diario, activo, created_at, updated_at'
+const COLUMNAS =
+  'id, nombre, tipo, categoria_vaso, categoria_producto, tipo_unidad, valor_unidad, unidad_medida, stock_actual, stock_minimo, stock_minimo_diario, activo, created_at, updated_at'
 
 function mapRow(row: InsumoRow): Insumo {
   return {
@@ -33,6 +37,9 @@ function mapRow(row: InsumoRow): Insumo {
     nombre: row.nombre,
     tipo: row.tipo,
     categoriaVaso: row.categoria_vaso ?? null,
+    categoriaProducto: row.categoria_producto ?? null,
+    tipoUnidad: row.tipo_unidad,
+    valorUnidad: Number(row.valor_unidad),
     unidadMedida: row.unidad_medida,
     stockActual: row.stock_actual,
     stockMinimo: row.stock_minimo ?? 0,
@@ -60,7 +67,8 @@ export const insumosService = {
         nombre: input.nombre,
         tipo: input.tipo ?? 'otro',
         categoria_vaso: input.tipo === 'vaso' ? (input.categoriaVaso ?? 'ceviche') : null,
-        unidad_medida: input.unidadMedida ?? 'unidad',
+        tipo_unidad: input.tipoUnidad ?? 'unidad',
+        valor_unidad: input.valorUnidad ?? 1,
         stock_actual: input.stockActual ?? 0,
         stock_minimo: input.stockMinimo ?? 0,
         stock_minimo_diario: input.stockMinimoDiario ?? 0,
@@ -76,7 +84,8 @@ export const insumosService = {
     if (cambios.nombre !== undefined) payload.nombre = cambios.nombre
     if (cambios.tipo !== undefined) payload.tipo = cambios.tipo
     if (cambios.categoriaVaso !== undefined) payload.categoria_vaso = cambios.categoriaVaso
-    if (cambios.unidadMedida !== undefined) payload.unidad_medida = cambios.unidadMedida
+    if (cambios.tipoUnidad !== undefined) payload.tipo_unidad = cambios.tipoUnidad
+    if (cambios.valorUnidad !== undefined) payload.valor_unidad = cambios.valorUnidad
     if (cambios.stockActual !== undefined) payload.stock_actual = cambios.stockActual
     if (cambios.stockMinimo !== undefined) payload.stock_minimo = cambios.stockMinimo
     if (cambios.stockMinimoDiario !== undefined) payload.stock_minimo_diario = cambios.stockMinimoDiario
@@ -90,5 +99,27 @@ export const insumosService = {
       .single()
     if (error) throw error
     return mapRow(data as InsumoRow)
+  },
+
+  /**
+   * Elimina físicamente un insumo (solo rol Administrador; ver política RLS
+   * `insumos_delete` + rol_permisos en 20260912000002_permitir_eliminar_insumos.sql).
+   *
+   * Si el insumo ya tiene movimientos de inventario, aparece en una receta de
+   * producto o está mapeado 1:1 a un tamaño de vaso, la BD rechaza el DELETE
+   * (foreign_key_violation, `on delete restrict`) para no romper la
+   * trazabilidad. En ese caso se sugiere desactivar el insumo en su lugar
+   * (mismo patrón que productosService.eliminarProducto).
+   */
+  async eliminarInsumo(id: string): Promise<void> {
+    const { error } = await supabase.from('insumos').delete().eq('id', id)
+    if (error) {
+      if (error.code === '23503') {
+        throw new Error(
+          'No se puede eliminar este insumo porque ya tiene movimientos de inventario, recetas o tamaños de vaso asociados. Puedes apagarlo (desactivarlo) para que no siga en uso.',
+        )
+      }
+      throw error
+    }
   },
 }

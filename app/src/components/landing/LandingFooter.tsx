@@ -98,7 +98,7 @@ export function LandingFooter() {
             <strong>Sábados y Domingos:</strong> 10:30 AM – 10:00 PM
           </p>
           <p style={{ margin: 0, fontSize: 13, color: '#41AFE0', fontWeight: 600 }}>
-            🛵 Domicilios activos toda la jornada
+            Domicilios activos toda la jornada
           </p>
         </div>
 
@@ -128,7 +128,6 @@ export function LandingFooter() {
               boxShadow: '0 4px 14px rgba(46, 158, 91, 0.4)',
             }}
           >
-            <span>💬</span>
             <span>Escribir al WhatsApp (+57 314 549 9206)</span>
           </a>
         </div>
@@ -150,7 +149,7 @@ export function LandingFooter() {
         }}
       >
         <span>© {new Date().getFullYear()} Cipote Ceviche Cocteles. Todos los derechos reservados.</span>
-        <span>Hecho con amor y sabor a costa 🌊🦐</span>
+        <span>Hecho con amor y sabor a costa</span>
       </div>
     </footer>
   )

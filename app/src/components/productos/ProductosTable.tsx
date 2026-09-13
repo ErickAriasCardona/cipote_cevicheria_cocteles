@@ -1,8 +1,9 @@
 import { Fragment, useState } from 'react'
 import type { Producto } from '../../types/producto'
 import type { TamanoVaso } from '../../types/tamanoVaso'
+import type { Insumo } from '../../types/insumo'
 import type {
-  CrearProductoTamanoPrecioInput,
+  ComboTamanoPrecioInput,
   ProductoTamanoPrecio,
 } from '../../types/productoTamanoPrecio'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
@@ -11,6 +12,7 @@ import { ProductoTamanoPrecioForm } from './ProductoTamanoPrecioForm'
 import { ProductoTamanoPrecioTable } from './ProductoTamanoPrecioTable'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
+import { obtenerCombosDisponibles } from '../../utils/unidadMedida'
 
 interface ProductosTableProps {
   productos: Producto[]
@@ -21,7 +23,10 @@ interface ProductosTableProps {
   onEliminar: (id: string, nombre: string) => Promise<void>
   precios: ProductoTamanoPrecio[]
   tamanosVaso: TamanoVaso[]
-  onCrearTamanoPrecio: (input: CrearProductoTamanoPrecioInput) => Promise<void>
+  /** Fuente de las combinaciones tipo_unidad+valor_unidad disponibles por
+   * categoría (ver `utils/unidadMedida.combosUnidadPorCategoria`). */
+  insumos: Insumo[]
+  onCrearTamanoPrecio: (input: ComboTamanoPrecioInput) => Promise<void>
   onActualizarPrecioTamano: (tamanoVasoId: string, precio: number) => Promise<void>
   onCambiarActivoTamano: (tamanoVasoId: string, activo: boolean) => Promise<void>
   onEliminarTamanoPrecio: (tamanoVasoId: string, etiqueta: string) => Promise<void>
@@ -272,7 +277,12 @@ function DetalleProductoOtroInline({
   }
 
   return (
+    // form-add-row-container: establece el contexto de Container Query que
+    // usa .form-add-row en index.css para decidir según el ancho real
+    // disponible (no el de la ventana) si el botón "Guardar cambios" cabe en
+    // la misma fila de los inputs o pasa a ocupar el ancho completo debajo.
     <div
+      className="form-add-row-container"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -339,11 +349,8 @@ function DetalleProductoOtroInline({
         </div>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-end' }}
-      >
-        <div style={{ width: 160 }}>
+      <form onSubmit={handleSubmit} className="form-add-row">
+        <div className="form-add-row-field form-add-row-field--narrow-lg">
           <Input
             label="Precio unitario ($)"
             id={`precio_${producto.id}`}
@@ -355,7 +362,7 @@ function DetalleProductoOtroInline({
             required
           />
         </div>
-        <div style={{ flex: '1 1 240px' }}>
+        <div className="form-add-row-field" style={{ flexBasis: 240 }}>
           <Input
             label="Descripción (opcional)"
             id={`desc_${producto.id}`}
@@ -368,6 +375,7 @@ function DetalleProductoOtroInline({
           type="submit"
           variant="primary"
           disabled={guardando || !hayCambios}
+          className="form-add-row-btn"
           style={{ height: 42, borderRadius: 10 }}
         >
           {guardando ? 'Guardando…' : 'Guardar cambios'}
@@ -390,23 +398,6 @@ function DetalleProductoOtroInline({
   )
 }
 
-function obtenerTamanosDisponibles(
-  producto: Producto,
-  precios: ProductoTamanoPrecio[],
-  tamanosVaso: TamanoVaso[],
-): TamanoVaso[] {
-  if (producto.categoria === 'otro') return []
-  const filasProducto = precios.filter((p) => p.productoId === producto.id)
-  return tamanosVaso
-    .filter((t) => {
-      if (producto.categoria === 'bebida') return t.tipo === 'bebida' || t.categoria === 'bebida'
-      if (producto.categoria === 'granizado') return t.categoria === 'granizado'
-      if (producto.categoria === 'ceviche') return t.categoria === 'ceviche' || (!t.categoria && t.tipo === 'vaso')
-      return false
-    })
-    .filter((tamano) => !filasProducto.some((fila) => fila.tamanoVasoId === tamano.id))
-}
-
 export function ProductosTable({
   productos,
   conteoTamanosActivos,
@@ -416,6 +407,7 @@ export function ProductosTable({
   onEliminar,
   precios,
   tamanosVaso,
+  insumos,
   onCrearTamanoPrecio,
   onActualizarPrecioTamano,
   onCambiarActivoTamano,
@@ -468,7 +460,7 @@ export function ProductosTable({
           {productos.map((producto) => {
             const expandido = producto.id === productoExpandidoId
             const filasProducto = precios.filter((p) => p.productoId === producto.id)
-            const tamanosDisponibles = obtenerTamanosDisponibles(producto, precios, tamanosVaso)
+            const combosDisponibles = obtenerCombosDisponibles(producto, precios, tamanosVaso, insumos)
             const catInfo = etiquetaCategoria(producto.categoria)
 
             return (
@@ -679,7 +671,7 @@ export function ProductosTable({
                               <ProductoTamanoPrecioForm
                                 productoId={producto.id}
                                 nombreProducto={producto.nombre}
-                                tamanosDisponibles={tamanosDisponibles}
+                                combosDisponibles={combosDisponibles}
                                 onCrear={onCrearTamanoPrecio}
                               />
                             </div>

@@ -38,7 +38,7 @@ const ADMIN_MODULES: AdminModuleCard[] = [
     ),
   },
   {
-    to: '/administrador/insumos',
+    to: '/administrador/inventario',
     title: 'Insumos e inventario',
     desc: 'Existencias físicas e inventario inicial de vasos',
     tint: 'green',

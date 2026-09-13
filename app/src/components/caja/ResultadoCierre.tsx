@@ -47,7 +47,12 @@ export function ResultadoCierre({ resultado, tamanosVaso }: ResultadoCierreProps
   }
 
   return (
-    <GlassCard style={{ maxWidth: 760, margin: '0 auto', padding: '36px 36px' }}>
+    // Ticket responsive 2026-09-12 (tarea 3): mismo ajuste que CierreCajaForm
+    // -- el grid de 3 tarjetas de BalanceTransferenciasCierre (minmax 260px)
+    // se apretaba contra el borde en mobile angosto (~375px) con el padding
+    // fijo de 36px por lado. clamp() lo reduce de forma continua sin tocar
+    // el aspecto en desktop/tablet.
+    <GlassCard style={{ maxWidth: 760, margin: '0 auto', padding: 'clamp(16px, 5vw, 36px)' }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <h2
           style={{
