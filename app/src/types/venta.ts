@@ -44,18 +44,35 @@ export interface Venta {
  * Edge Function valida esto explícitamente y rechaza con 422 si no se
  * cumple. `tamanoVasoId` solo aplica junto con `productoId` (una promoción
  * ya trae el tamaño de cada componente fijado en `promocion_productos`). */
-export interface RegistrarVentaInput {
+export interface ItemVentaTicket {
   productoId?: string | null
   promocionId?: string | null
   tamanoVasoId?: string | null
   cantidad: number
+  precio?: number
+  nombre?: string
+  tamanoEtiqueta?: string
+}
+
+export interface RegistrarVentaInput {
+  items?: ItemVentaTicket[]
+  productoId?: string | null
+  promocionId?: string | null
+  tamanoVasoId?: string | null
+  cantidad?: number
   tipoEntrega: TipoEntrega
   observaciones?: string
   pagos: RegistrarVentaPagoInput[]
+  cantidadBolsas?: number
+  cantidadBolsasGrande?: number
+  cantidadBolsasMediana?: number
+  cantidadBolsasPequena?: number
+  cantidadTapas?: number
 }
 
 export interface RegistrarVentaResultado {
-  venta: Venta
+  venta?: Venta
+  ventas?: Venta[]
   pagos: VentaPago[]
 }
 

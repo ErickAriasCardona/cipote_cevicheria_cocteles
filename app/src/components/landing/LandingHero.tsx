@@ -1,6 +1,7 @@
 export function LandingHero() {
   return (
     <section
+      id="hero"
       style={{
         position: 'relative',
         minHeight: '82vh',

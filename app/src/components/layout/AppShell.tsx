@@ -12,6 +12,7 @@ import { NavDrawer } from './NavDrawer'
 const CAJERO_TABS: TabItem[] = [
   { to: '/cajero', label: 'Panel Cajero', end: true },
   { to: '/cajero/venta', label: 'POS de Ventas' },
+  { to: '/cajero/gastos', label: 'Gastos de Turno' },
   { to: '/cajero/transferencias', label: 'Transferencias' },
   { to: '/cajero/cierre', label: 'Cierre de caja' },
 ]
@@ -21,7 +22,7 @@ const ADMIN_TABS: TabItem[] = [
   { to: '/administrador/usuarios', label: 'Usuarios' },
   { to: '/administrador/productos', label: 'Productos' },
   { to: '/administrador/inventario', label: 'Inventario' },
-  { to: '/administrador/receta', label: 'Receta' },
+  { to: '/administrador/carta', label: 'Carta' },
   { to: '/administrador/ventas', label: 'Ventas' },
   { to: '/administrador/cierres-caja', label: 'Cierres de caja' },
   { to: '/administrador/gastos', label: 'Gastos' },
@@ -68,7 +69,7 @@ export function AppShell({ children, hideTabs = false, rol }: AppShellProps) {
         position: 'relative',
         minHeight: '100vh',
         width: '100%',
-        overflowX: 'hidden',
+        overflowX: 'clip',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -129,25 +130,22 @@ export function AppShell({ children, hideTabs = false, rol }: AppShellProps) {
         conservan su tamaño y quedan siempre visibles en los extremos. */}
         <div
           style={{
+            position: 'sticky',
+            top: 12,
+            zIndex: 100,
             display: 'flex',
             alignItems: 'center',
-            // justifyContent: 'space-between' -- en desktop no tiene efecto
-            // (.navbar-desktop-content usa flex: '1 1 auto' y ya consume todo
-            // el espacio sobrante entre logo y el resto, así que no queda
-            // espacio libre que redistribuir). En tablet/mobile, con
-            // .navbar-desktop-content oculto (display:none, ver index.css),
-            // esta es la propiedad que separa el logo (izquierda) del botón
-            // de hamburguesa (derecha) a los extremos de la barra -- pedido
-            // explícito de Erick (ticket 2026-09-12, tarea 2).
             justifyContent: 'space-between',
             flexWrap: 'nowrap',
             gap: 16,
             marginBottom: 20,
             padding: '12px 20px',
             borderRadius: 18,
-            background: 'var(--input-bg)',
-            border: '1px solid var(--input-border)',
-            boxShadow: 'inset 0 1px 0 var(--pill-highlight)',
+            background: 'var(--nav-glass-bg)',
+            border: '1px solid var(--nav-glass-border)',
+            boxShadow: 'var(--nav-glass-shadow)',
+            backdropFilter: 'blur(24px) saturate(160%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(160%)',
           }}
         >
           <Link
@@ -204,7 +202,7 @@ export function AppShell({ children, hideTabs = false, rol }: AppShellProps) {
               // con al menos una tab visible (ver también las reglas
               // responsive de marca/usuario en index.css que le dan más
               // espacio a este bloque en pantallas angostas).
-              <div style={{ flex: '1 1 auto', minWidth: 72 }}>
+              <div style={{ flex: '1 1 auto', minWidth: 72, display: 'flex', justifyContent: 'center' }}>
                 <Tabs items={tabs} />
               </div>
             ) : (

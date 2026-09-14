@@ -6,6 +6,7 @@ import { AppShell } from '../../components/layout/AppShell'
 import { GlassCard } from '../../components/ui/GlassCard'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
+import { formatearCOP } from '../../utils/moneda'
 
 const GRANULARIDADES: { value: Granularidad; label: string }[] = [
   { value: 'dia', label: 'Por Día' },
@@ -117,7 +118,7 @@ export function ReportesVentasPage() {
               Total Facturado
             </div>
             <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--brand-red)', marginTop: 4 }}>
-              ${totalGeneral.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+              {formatearCOP(totalGeneral)}
             </div>
           </GlassCard>
 
@@ -171,7 +172,7 @@ export function ReportesVentasPage() {
                         {periodo.cantidadVentas}
                       </td>
                       <td style={{ padding: '14px 12px', fontSize: 14, fontWeight: 700, color: 'var(--brand-red)' }}>
-                        ${periodo.totalVendido.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                        {formatearCOP(periodo.totalVendido)}
                       </td>
                     </tr>
                   ))}

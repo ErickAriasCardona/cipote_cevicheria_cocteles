@@ -273,7 +273,15 @@ export function InsumoForm({
   }
 
   return (
-    <GlassCard padding={22}>
+    <GlassCard
+      padding={22}
+      style={{
+        background: 'var(--modal-bg)',
+        border: '1px solid var(--modal-border)',
+        boxShadow: 'var(--modal-shadow)',
+        borderRadius: 20,
+      }}
+    >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>

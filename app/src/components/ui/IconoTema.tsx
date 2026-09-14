@@ -1,6 +1,6 @@
 /**
  * Iconos SVG stroke-based para el toggle de tema claro/oscuro (reemplazan los
- * caracteres tipográficos ☾/☀ usados antes). Mismo lenguaje visual que
+ * caracteres tipográficos luna/sol usados antes). Mismo lenguaje visual que
  * IconoSalir (AppShell.tsx) e IconoPower/IconoEditar/IconoTrash (InsumosTable.tsx).
  */
 export function IconoSol() {

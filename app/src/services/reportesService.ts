@@ -5,7 +5,7 @@ import type { VentaReporte } from '../types/reporteVentas'
  * Servicio de lectura agregada para reportes de ventas (BD-09.1, RF-06.1).
  *
  * Consulta de solo lectura directa bajo RLS (política `ventas_select`,
- * S✅ global para Administrador — misma política ya usada en
+ * SELECT permitido global para Administrador — misma política ya usada en
  * `ventasService.listarVentasAdministrador`, BD-07.2). Sin tabla nueva ni
  * Edge Function: decisión ya tomada por Prometeo/Poseidon (ver tarjeta
  * Kanban BD-09 y MODELO_DATOS_MVP_1.0_2026-08-30.md, este bloque no agrega

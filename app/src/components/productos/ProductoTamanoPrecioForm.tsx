@@ -6,6 +6,8 @@ import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
+import { IconoCheck } from '../ui/IconosFormas'
+import { formatearCOP } from '../../utils/moneda'
 
 interface ProductoTamanoPrecioFormProps {
   productoId: string
@@ -52,7 +54,7 @@ export function ProductoTamanoPrecioForm({
     if (!comboSeleccionado) return
     const ok = await confirmar({
       titulo: 'Agregar presentación',
-      mensaje: `¿Confirmas agregar el tamaño "${comboSeleccionado.etiqueta}" con precio $${precioNumerico.toFixed(2)} a "${nombreProducto}"?`,
+      mensaje: `¿Confirmas agregar el tamaño "${comboSeleccionado.etiqueta}" con precio ${formatearCOP(precioNumerico)} a "${nombreProducto}"?`,
       textoConfirmar: 'Agregar',
       varianteConfirmar: 'blue',
     })
@@ -88,7 +90,9 @@ export function ProductoTamanoPrecioForm({
           gap: 12,
         }}
       >
-        <div style={{ fontSize: 18, color: '#10b981', fontWeight: 800 }}>✓</div>
+        <div style={{ color: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <IconoCheck size={20} color="#10b981" strokeWidth={2.6} />
+        </div>
         <div>
           <p style={{ margin: 0, fontSize: 13, color: '#10b981', fontWeight: 700 }}>
             Todas las presentaciones configuradas
@@ -141,8 +145,8 @@ export function ProductoTamanoPrecioForm({
             label="Precio de venta ($)"
             id="ptp_precio"
             type="number"
-            min="0.01"
-            step="0.01"
+            min="0"
+            step="1"
             value={precio}
             onChange={(e) => setPrecio(e.target.value)}
             placeholder="Ej: 14000"

@@ -45,7 +45,7 @@ export function LandingPage() {
         style={{
           fontFamily: "'Inter', system-ui, sans-serif",
           color: '#181B22',
-          overflowX: 'hidden',
+          overflowX: 'clip',
           position: 'relative',
           background: 'linear-gradient(160deg, #fbfbfc 0%, #f3f5f7 45%, #f8f2f3 100%)',
           minHeight: '100vh',
@@ -103,7 +103,7 @@ export function LandingPage() {
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           <LandingNav />
-          <main>
+          <main className="landing-main-content">
             <LandingHero />
             <LandingMenu />
             <LandingFeatured />

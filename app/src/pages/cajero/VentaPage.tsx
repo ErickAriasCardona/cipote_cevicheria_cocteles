@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { VentaForm } from '../../components/ventas/VentaForm'
 import { cajaService } from '../../services/cajaService'
+import { insumosService } from '../../services/insumosService'
 import { productoTamanoPrecioService } from '../../services/productoTamanoPrecioService'
 import { productosService } from '../../services/productosService'
+import { promocionesService } from '../../services/promocionesService'
 import { ventasService } from '../../services/ventasService'
+import type { Insumo } from '../../types/insumo'
 import type { Producto } from '../../types/producto'
 import type { ProductoTamanoPrecio } from '../../types/productoTamanoPrecio'
 import type { TamanoVaso } from '../../types/tamanoVaso'
+import type { PromocionConDetalle } from '../../types/promocion'
 import type { RegistrarVentaInput } from '../../types/venta'
 import type { TurnoCaja } from '../../types/turnoCaja'
 import { AppShell } from '../../components/layout/AppShell'
@@ -14,14 +18,16 @@ import { GlassCard } from '../../components/ui/GlassCard'
 import { Link } from 'react-router-dom'
 
 /**
- * POS de ventas (BD-04.3/04.4/04.5, RF-03.2 a RF-03.4). Exige un turno de
- * caja abierto propio.
+ * POS de ventas multi-producto (BD-04.3/04.4/04.5, RF-03.2 a RF-03.4).
+ * Exige un turno de caja abierto propio.
  */
 export function VentaPage() {
   const [turno, setTurno] = useState<TurnoCaja | null>(null)
   const [productos, setProductos] = useState<Producto[]>([])
   const [tamanosVaso, setTamanosVaso] = useState<TamanoVaso[]>([])
   const [preciosPorTamano, setPreciosPorTamano] = useState<ProductoTamanoPrecio[]>([])
+  const [promociones, setPromociones] = useState<PromocionConDetalle[]>([])
+  const [insumos, setInsumos] = useState<Insumo[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -29,16 +35,26 @@ export function VentaPage() {
     setCargando(true)
     setError(null)
     try {
-      const [turnoAbierto, listaProductos, listaTamanosVaso, listaPrecios] = await Promise.all([
-        cajaService.obtenerTurnoAbierto(),
-        productosService.listarProductos(),
-        ventasService.listarTamanosVasoActivos(),
-        productoTamanoPrecioService.listarActivos(),
-      ])
+      const [turnoAbierto, listaProductos, listaTamanosVaso, listaPrecios, listaPromociones, listaInsumos] =
+        await Promise.all([
+          cajaService.obtenerTurnoAbierto(),
+          productosService.listarProductos(),
+          ventasService.listarTamanosVasoActivos(),
+          productoTamanoPrecioService.listarActivos(),
+          promocionesService.listarPromociones(),
+          insumosService.listarInsumos(),
+        ])
       setTurno(turnoAbierto)
-      setProductos(listaProductos.filter((producto) => producto.activo))
+      // Filtrar productos activos y excluir el producto técnico de domicilio para la selección directa
+      setProductos(
+        listaProductos.filter(
+          (p) => p.activo && p.id !== '00000000-0000-0000-0000-0000000000d0',
+        ),
+      )
       setTamanosVaso(listaTamanosVaso)
       setPreciosPorTamano(listaPrecios)
+      setPromociones(listaPromociones.filter((p) => p.activo))
+      setInsumos(listaInsumos)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar el POS de ventas.')
     } finally {
@@ -83,6 +99,8 @@ export function VentaPage() {
           productos={productos}
           tamanosVaso={tamanosVaso}
           preciosPorTamano={preciosPorTamano}
+          promociones={promociones}
+          insumos={insumos}
           onRegistrar={handleRegistrar}
         />
       )}

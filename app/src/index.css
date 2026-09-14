@@ -54,9 +54,18 @@
   --opt-active-color: #0d3a52;
   --opt-active-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 14px rgba(65, 175, 224, 0.2);
 
-  --modal-overlay: rgba(5, 8, 14, 0.45);
+  --modal-overlay: rgba(15, 23, 42, 0.38);
+  --modal-bg: #ffffff;
+  --modal-border: rgba(15, 20, 30, 0.12);
+  --modal-shadow: 0 24px 54px rgba(15, 20, 30, 0.18), 0 8px 16px rgba(15, 20, 30, 0.08);
+  --card-bg: #ffffff;
+  --card-border: rgba(15, 20, 30, 0.1);
   --footer-bg: #0b192c;
   --bg-wave: #fbfbfc;
+
+  --nav-glass-bg: rgba(255, 255, 255, 0.72);
+  --nav-glass-border: rgba(15, 20, 30, 0.09);
+  --nav-glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
 
   --dropdown-bg: rgba(255, 255, 255, 0.96);
   --dropdown-border: rgba(15, 20, 30, 0.12);
@@ -116,9 +125,18 @@
   --opt-active-color: #ffffff;
   --opt-active-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 14px rgba(65, 175, 224, 0.3);
 
-  --modal-overlay: rgba(5, 8, 14, 0.6);
+  --modal-overlay: rgba(3, 7, 18, 0.48);
+  --modal-bg: #151e2e;
+  --modal-border: rgba(255, 255, 255, 0.12);
+  --modal-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --card-bg: #151e2e;
+  --card-border: rgba(255, 255, 255, 0.1);
   --footer-bg: #070e17;
   --bg-wave: #0a0d14;
+
+  --nav-glass-bg: rgba(13, 20, 32, 0.72);
+  --nav-glass-border: rgba(255, 255, 255, 0.1);
+  --nav-glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
   --dropdown-bg: rgba(18, 24, 38, 0.96);
   --dropdown-border: rgba(255, 255, 255, 0.14);
@@ -133,6 +151,17 @@
 *::before,
 *::after {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+}
+
+@media (max-width: 540px) {
+  html {
+    scroll-padding-top: 80px;
+  }
 }
 
 body {
@@ -205,6 +234,16 @@ a:hover {
 @keyframes birdFloat3 {
   0%, 100% { transform: translate(0, 0); }
   50% { transform: translate(10px, -8px); }
+}
+
+@keyframes drawerIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
@@ -623,4 +662,478 @@ bloque (incluido navbar-user-role) queda oculto por .navbar-desktop-content. */
     width: 100%;
   }
 }
+
+/* Layout para Carta y Promociones */
+.carta-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.95fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.carta-productos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 46px 16px;
+  padding-top: 36px;
+}
+
+@media (max-width: 992px) {
+  .carta-layout-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 540px) {
+  .carta-productos-grid {
+    grid-template-columns: 1fr;
+    gap: 40px 14px;
+  }
+}
+
+/* ========================================================
+   Tabs del POS con exactamente el mismo estilo que Landing
+   (Pill container traslúcido + opciones redondeadas con hover)
+   ======================================================== */
+.pos-tabs-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--tabs-wrap-bg);
+  border: 1px solid var(--tabs-wrap-border);
+  border-radius: 999px;
+  padding: 3px 4px;
+  flex-wrap: nowrap;
+  box-shadow: inset 0 1px 0 var(--pill-highlight);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+.pos-tabs-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.pos-tab-link {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  user-select: none;
+}
+
+.pos-tab-link:hover:not(.active) {
+  color: var(--text-primary);
+  background: var(--sec-active-bg);
+}
+
+.pos-tab-link.active {
+  background: var(--sec-active-bg);
+  color: var(--text-primary);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 var(--pill-highlight), 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(65, 175, 224, 0.28);
+}
+
+@media (max-width: 1280px) {
+  .pos-tabs-nav {
+    gap: 3px;
+    padding: 2px 3px;
+  }
+
+  .pos-tab-link {
+    padding: 4px 7px;
+    font-size: 11px;
+  }
+}
+
+/* ========================================================
+   Responsive Landing: Top Navbar (Siempre Fijo)
+   ======================================================== */
+.landing-nav-header {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  max-width: 1380px;
+  width: calc(100% - 32px);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.landing-nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 16px;
+  padding: 12px 20px;
+  border-radius: 18px;
+  background: var(--nav-glass-bg);
+  border: 1px solid var(--nav-glass-border);
+  box-shadow: var(--nav-glass-shadow);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  pointer-events: auto;
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+@media (max-width: 540px) {
+  .landing-nav-header {
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 20px);
+    margin: 0;
+  }
+  .landing-nav-inner {
+    padding: 9px 12px;
+    gap: 10px;
+    border-radius: 14px;
+  }
+}
+
+.landing-main-content {
+  padding-top: 88px;
+}
+
+@media (max-width: 540px) {
+  .landing-main-content {
+    padding-top: 72px;
+  }
+}
+
+#hero,
+#menu,
+#feature,
+#pedir,
+#contacto {
+  scroll-margin-top: 96px;
+}
+
+@media (max-width: 540px) {
+  #hero,
+  #menu,
+  #feature,
+  #pedir,
+  #contacto {
+    scroll-margin-top: 80px;
+  }
+}
+
+.landing-nav-brand-text {
+  font-family: var(--brand-font);
+  font-size: 22px;
+  color: var(--text-primary);
+  line-height: 1;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.landing-brand-full {
+  display: inline;
+}
+
+.landing-brand-short {
+  display: none;
+}
+
+.landing-nav-desktop {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.landing-nav-mobile-actions {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .landing-nav-desktop {
+    display: none !important;
+  }
+
+  .landing-nav-mobile-actions {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-brand-full {
+    display: none;
+  }
+  .landing-brand-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 360px) {
+  .landing-brand-short {
+    display: none;
+  }
+}
+
+/* ========================================================
+   Responsive Landing: Sección de Promociones (LandingFeatured)
+   ======================================================== */
+.landing-featured-section {
+  position: relative;
+  overflow: hidden;
+  min-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(65, 175, 224, 0.11) 0%, rgba(65, 175, 224, 0.04) 100%);
+  padding: 90px 6% 80px;
+  box-sizing: border-box;
+}
+
+.landing-featured-grid {
+  position: relative;
+  z-index: 1;
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 50px;
+  align-items: center;
+  width: 100%;
+}
+
+.landing-featured-img-wrap {
+  border-radius: 28px;
+  overflow: hidden;
+  aspect-ratio: 5 / 4;
+  box-shadow: 0 26px 50px rgba(15, 20, 30, 0.16);
+  transition: transform 0.25s ease-out, opacity 0.3s ease;
+  animation: fadeInUp 0.5s ease both;
+  background: #fff;
+  position: relative;
+}
+
+.landing-featured-float-card {
+  position: absolute;
+  bottom: -24px;
+  right: -14px;
+  width: min(250px, 75%);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52));
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(15, 20, 30, 0.08);
+  border-radius: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 20px 40px rgba(15, 20, 30, 0.18);
+  padding: 16px 18px;
+  animation: fadeInUp 0.4s ease both;
+  z-index: 3;
+}
+
+.landing-featured-text-col {
+  animation: fadeInUp 0.5s ease both;
+}
+
+.landing-featured-dot-btn {
+  padding: 10px 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+}
+
+.landing-featured-dot-pill {
+  height: 10px;
+  border-radius: 999px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 860px) {
+  .landing-featured-section {
+    padding: 60px 5% 54px;
+    min-height: auto;
+  }
+
+  .landing-featured-grid {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+
+  .landing-featured-float-card {
+    right: 12px;
+    bottom: -16px;
+    width: min(240px, 80%);
+    padding: 14px 16px;
+  }
+
+  .landing-featured-text-col {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .landing-featured-section {
+    padding: 48px 4% 44px;
+  }
+
+  .landing-featured-img-wrap {
+    border-radius: 20px;
+    aspect-ratio: 4 / 3;
+  }
+
+  .landing-featured-float-card {
+    right: 8px;
+    bottom: -14px;
+    width: min(220px, 86%);
+    padding: 12px 14px;
+  }
+}
+
+/* ========================================================
+   Responsive Landing: Pestaña fija "Ver Carta" (LandingMenu)
+   ======================================================== */
+.landing-carta-fixed-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 85;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 24px 0 0 24px;
+  background: linear-gradient(135deg, var(--brand-red, #e42926), #c81e1e);
+  color: #fff;
+  box-shadow: -4px 10px 30px rgba(228, 41, 38, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-right: none;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.3s ease;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.landing-carta-fixed-tab:hover {
+  transform: translateY(-50%) translateX(-4px);
+  box-shadow: -6px 14px 36px rgba(228, 41, 38, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 540px) {
+  .landing-carta-fixed-tab {
+    padding: 10px 12px;
+    gap: 6px;
+    border-radius: 20px 0 0 20px;
+  }
+
+  .landing-carta-subtext {
+    display: none;
+  }
+}
+
+/* ========================================================
+   Responsive Landing: Drawer de Carta Completa (Apertura y Cierre Suave)
+   ======================================================== */
+.landing-carta-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(980px, 94vw);
+  background: var(--screen-bg);
+  box-shadow: -15px 0 50px rgba(0, 0, 0, 0.28);
+  border-left: 1px solid var(--glass-border);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+  z-index: 1201;
+}
+
+.landing-carta-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 28px;
+  border-bottom: 1px solid var(--hr-line);
+  background: var(--input-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.landing-carta-drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 24px 60px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 540px) {
+  .landing-carta-drawer {
+    width: 100vw;
+  }
+  .landing-carta-drawer-header {
+    padding: 16px 16px;
+  }
+  .landing-carta-drawer-content {
+    padding: 18px 12px 60px;
+  }
+}
+
+/* ========================================================
+   Responsive Landing: Servicios (5 opciones adaptativas)
+   ======================================================== */
+.landing-services-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 20px;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .landing-services-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 620px) {
+  .landing-services-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  .landing-services-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+
+
 

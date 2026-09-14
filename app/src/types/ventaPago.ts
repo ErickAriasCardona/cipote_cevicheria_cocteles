@@ -25,4 +25,6 @@ export interface RegistrarVentaPagoInput {
   monto: number
   /** Efectivo entregado por el cliente para calcular devuelta (solo cliente web). */
   pagaCon?: number
+  /** Sub-método descriptivo para transferencias (Nequi, Bre-B, Datáfono, Transferencia Bancaria) */
+  subMetodo?: string
 }

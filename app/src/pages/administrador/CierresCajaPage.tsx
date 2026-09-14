@@ -11,6 +11,7 @@ import { GlassCard } from '../../components/ui/GlassCard'
 import { Button } from '../../components/ui/Button'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { BalanceTransferenciasCierre } from '../../components/caja/BalanceTransferenciasCierre'
+import { formatearCOP } from '../../utils/moneda'
 
 /**
  * Consulta de cierres de caja para el Administrador (CU-02.3/CU-04.4).
@@ -150,19 +151,19 @@ export function CierresCajaPage() {
                             {new Date(cierre.fechaCierre).toLocaleString('es-CO')}
                           </td>
                           <td style={{ padding: '14px 10px', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            ${Number(cierre.totalEfectivo).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                            {formatearCOP(cierre.totalEfectivo)}
                           </td>
                           <td style={{ padding: '14px 10px', fontSize: 13.5, fontWeight: 700, color: 'var(--brand-blue)' }}>
-                            ${Number(cierre.totalTransferenciaExitosa).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                            {formatearCOP(cierre.totalTransferenciaExitosa)}
                           </td>
                           <td style={{ padding: '14px 10px', fontSize: 13, color: 'var(--text-secondary)' }}>
-                            ${otros.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                            {formatearCOP(otros)}
                           </td>
                           <td style={{ padding: '14px 10px', fontSize: 13, color: 'var(--text-primary)' }}>
-                            ${Number(cierre.dineroContado).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                            {formatearCOP(cierre.dineroContado)}
                           </td>
                           <td style={{ padding: '14px 10px', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-                            ${Number(cierre.totalEsperado).toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                            {formatearCOP(cierre.totalEsperado)}
                           </td>
                           <td style={{ padding: '14px 10px' }}>
                             <StatusPill variant={esCuadrado ? 'positive' : 'destructive'}>

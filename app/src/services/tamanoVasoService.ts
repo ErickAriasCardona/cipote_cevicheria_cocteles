@@ -55,6 +55,19 @@ interface ResolverTamanoVasoInput {
 }
 
 export const tamanoVasoService = {
+  /**
+   * Lista todos los tamaños de vaso / presentaciones activas en el sistema.
+   */
+  async listarActivos(): Promise<TamanoVaso[]> {
+    const { data, error } = await supabase
+      .from('tamanos_vaso')
+      .select(COLUMNAS)
+      .eq('activo', true)
+      .order('etiqueta', { ascending: true })
+    if (error) throw error
+    return (data as TamanoVasoRow[]).map(mapRow)
+  },
+
   /** Busca una fila de `tamanos_vaso` que ya represente esta combinación
    * (categoria + onzas si tipoUnidad='oz', o + mililitros si ='ml', o por
    * etiqueta como respaldo para otros tipos de unidad); si no existe, la

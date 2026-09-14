@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCarrito } from '../../hooks/useCarrito'
 import { WHATSAPP_NUMBER, fmtCOP } from '../../config/landing'
+import { IconoCruz, IconoMinus, IconoPlus, IconoTrash, IconoWhatsApp } from '../ui/IconosFormas'
 
 export function CartDrawer() {
   const { items, total, drawerOpen, setDrawerOpen, inc, dec, remove } = useCarrito()
@@ -11,6 +12,24 @@ export function CartDrawer() {
   const [contactoRecibe, setContactoRecibe] = useState('')
   const [metodoPago, setMetodoPago] = useState('Efectivo')
   const [efectivoConQuePaga, setEfectivoConQuePaga] = useState('')
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setDrawerOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [drawerOpen, setDrawerOpen])
 
   if (!drawerOpen) return null
 
@@ -80,14 +99,16 @@ export function CartDrawer() {
     <>
       {/* Overlay */}
       <div
+        role="presentation"
         onClick={() => setDrawerOpen(false)}
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(10, 15, 25, 0.35)',
-          backdropFilter: 'blur(2px)',
-          WebkitBackdropFilter: 'blur(2px)',
-          zIndex: 49,
+          background: 'var(--modal-overlay)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          zIndex: 1300,
+          animation: 'fadeIn 0.2s ease-out',
         }}
       />
 
@@ -100,20 +121,22 @@ export function CartDrawer() {
           position: 'fixed',
           top: 0,
           right: 0,
+          bottom: 0,
           height: '100vh',
-          width: 'min(380px, 90vw)',
+          width: 'min(390px, 92vw)',
           background:
-            'linear-gradient(165deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7))',
-          backdropFilter: 'blur(24px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+            'linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.82))',
+          backdropFilter: 'blur(28px) saturate(150%)',
+          WebkitBackdropFilter: 'blur(28px) saturate(150%)',
           borderLeft: '1px solid rgba(15, 20, 30, 0.08)',
-          boxShadow: '-20px 0 50px rgba(15, 20, 30, 0.15)',
-          zIndex: 50,
-          padding: '26px 22px',
+          boxShadow: '-20px 0 50px rgba(0, 0, 0, 0.22)',
+          zIndex: 1310,
+          padding: '24px 20px',
           overflowY: 'auto',
           boxSizing: 'border-box',
           fontFamily: "'Inter', sans-serif",
           color: '#181B22',
+          animation: 'drawerIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
         <div
@@ -130,19 +153,19 @@ export function CartDrawer() {
             onClick={() => setDrawerOpen(false)}
             aria-label="Cerrar pedido"
             style={{
-              width: 30,
-              height: 30,
+              width: 32,
+              height: 32,
               borderRadius: '50%',
               border: 'none',
               background: 'rgba(15, 20, 30, 0.06)',
               cursor: 'pointer',
-              fontSize: 14,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              color: 'var(--text-primary)',
             }}
           >
-            ✕
+            <IconoCruz size={15} strokeWidth={2.4} />
           </button>
         </div>
 
@@ -172,6 +195,7 @@ export function CartDrawer() {
                     <button
                       type="button"
                       onClick={() => dec(it.key)}
+                      aria-label="Disminuir cantidad"
                       style={{
                         width: 26,
                         height: 26,
@@ -179,14 +203,13 @@ export function CartDrawer() {
                         border: '1px solid rgba(15, 20, 30, 0.12)',
                         background: 'rgba(15, 20, 30, 0.04)',
                         cursor: 'pointer',
-                        fontSize: 14,
-                        fontWeight: 700,
+                        color: 'var(--text-primary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      −
+                      <IconoMinus size={12} strokeWidth={2.4} />
                     </button>
                     <span
                       style={{
@@ -201,6 +224,7 @@ export function CartDrawer() {
                     <button
                       type="button"
                       onClick={() => inc(it.key)}
+                      aria-label="Aumentar cantidad"
                       style={{
                         width: 26,
                         height: 26,
@@ -208,19 +232,19 @@ export function CartDrawer() {
                         border: '1px solid rgba(15, 20, 30, 0.12)',
                         background: 'rgba(15, 20, 30, 0.04)',
                         cursor: 'pointer',
-                        fontSize: 14,
-                        fontWeight: 700,
+                        color: 'var(--text-primary)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      +
+                      <IconoPlus size={12} strokeWidth={2.4} />
                     </button>
                     <button
                       type="button"
                       onClick={() => remove(it.key)}
                       title="Eliminar producto"
+                      aria-label="Eliminar producto"
                       style={{
                         width: 26,
                         height: 26,
@@ -229,13 +253,12 @@ export function CartDrawer() {
                         background: 'rgba(228, 41, 38, 0.08)',
                         color: '#c81e1e',
                         cursor: 'pointer',
-                        fontSize: 12,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      ✕
+                      <IconoTrash size={12} />
                     </button>
                   </div>
                 </div>
@@ -485,9 +508,14 @@ export function CartDrawer() {
                   'inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 12px 26px rgba(228, 41, 38, 0.35)',
                 marginTop: 14,
                 transition: 'transform 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
               }}
             >
-              Finalizar pedido por WhatsApp
+              <IconoWhatsApp size={18} />
+              <span>Finalizar pedido por WhatsApp</span>
             </button>
             <p
               style={{

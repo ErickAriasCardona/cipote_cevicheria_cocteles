@@ -2,6 +2,7 @@ import { useConfirmacion } from '../../hooks/useConfirmacion'
 import type { VentaConEstadoEliminacion } from '../../types/venta'
 import { Button } from '../ui/Button'
 import { StatusPill } from '../ui/StatusPill'
+import { formatearCOP } from '../../utils/moneda'
 
 interface VentasAdminTableProps {
   ventas: VentaConEstadoEliminacion[]
@@ -62,7 +63,7 @@ function FilaVenta({ venta, onEliminar, onRestablecer }: FilaVentaProps) {
         {venta.cantidad}
       </td>
       <td style={{ padding: '14px 10px', fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-        ${venta.total.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+        {formatearCOP(venta.total)}
       </td>
       <td style={{ padding: '14px 10px', fontSize: 12.5, color: 'var(--text-secondary)' }}>
         {venta.observaciones ? (

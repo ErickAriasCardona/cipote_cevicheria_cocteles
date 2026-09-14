@@ -12,7 +12,9 @@ import { ProductoTamanoPrecioForm } from './ProductoTamanoPrecioForm'
 import { ProductoTamanoPrecioTable } from './ProductoTamanoPrecioTable'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
+import { IconoCarta, IconoCheck, IconoCruz } from '../ui/IconosFormas'
 import { obtenerCombosDisponibles } from '../../utils/unidadMedida'
+import { formatearCOP } from '../../utils/moneda'
 
 interface ProductosTableProps {
   productos: Producto[]
@@ -20,6 +22,7 @@ interface ProductosTableProps {
   productoExpandidoId: string | null
   onToggleEditar: (id: string) => void
   onCambiarActivo: (id: string, activo: boolean) => void
+  onToggleEnCarta: (id: string, enCarta: boolean) => void
   onEliminar: (id: string, nombre: string) => Promise<void>
   precios: ProductoTamanoPrecio[]
   tamanosVaso: TamanoVaso[]
@@ -39,20 +42,21 @@ interface FilaProductoProps {
   expandido: boolean
   onToggleEditar: (id: string) => void
   onCambiarActivo: ProductosTableProps['onCambiarActivo']
+  onToggleEnCarta: ProductosTableProps['onToggleEnCarta']
   onEliminar: ProductosTableProps['onEliminar']
 }
 
 function etiquetaCategoria(categoria: Producto['categoria']): { texto: string; color: string; bg: string } {
   switch (categoria) {
     case 'ceviche':
-      return { texto: 'Ceviche/Cóctel', color: '#60a5fa', bg: 'rgba(96, 165, 250, 0.12)' }
+      return { texto: 'Ceviche/Cóctel', color: '#41afe0', bg: 'rgba(65, 175, 224, 0.14)' }
     case 'granizado':
-      return { texto: 'Granizado', color: '#06b6d4', bg: 'rgba(6, 182, 212, 0.12)' }
+      return { texto: 'Granizado', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.14)' }
     case 'bebida':
-      return { texto: 'Bebida', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.12)' }
+      return { texto: 'Bebida', color: '#2e9e5b', bg: 'rgba(46, 158, 91, 0.14)' }
     case 'otro':
     default:
-      return { texto: 'Otro', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.12)' }
+      return { texto: 'Otro', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.14)' }
   }
 }
 
@@ -91,6 +95,7 @@ function FilaProducto({
   expandido,
   onToggleEditar,
   onCambiarActivo,
+  onToggleEnCarta,
   onEliminar,
 }: FilaProductoProps) {
   const { confirmar } = useConfirmacion()
@@ -108,6 +113,20 @@ function FilaProducto({
     })
     if (!ok) return
     onCambiarActivo(producto.id, siguienteActivo)
+  }
+
+  async function handleToggleEnCarta() {
+    const siguienteEnCarta = !producto.enCarta
+    const ok = await confirmar({
+      titulo: siguienteEnCarta ? 'Mostrar en la carta' : 'Ocultar de la carta',
+      mensaje: siguienteEnCarta
+        ? `¿Confirmas que el producto "${producto.nombre}" se muestre en la carta pública de la landing page?`
+        : `¿Confirmas ocultar el producto "${producto.nombre}" de la carta pública de la landing page? Seguirá activo para ventas en el POS.`,
+      textoConfirmar: siguienteEnCarta ? 'Mostrar en carta' : 'Ocultar',
+      varianteConfirmar: siguienteEnCarta ? 'activate' : 'destructive',
+    })
+    if (!ok) return
+    onToggleEnCarta(producto.id, siguienteEnCarta)
   }
 
   async function handleEliminar() {
@@ -159,7 +178,7 @@ function FilaProducto({
         {producto.categoria === 'otro' ? (
           <strong style={{ color: 'var(--brand-green)', fontSize: 13.5 }}>
             {producto.precio !== null
-              ? `$${producto.precio.toLocaleString('es-CO', { minimumFractionDigits: 2 })}`
+              ? formatearCOP(producto.precio)
               : '—'}
           </strong>
         ) : (
@@ -179,9 +198,42 @@ function FilaProducto({
           <span>{producto.activo ? 'Activo' : 'Inactivo'}</span>
         </button>
       </td>
-      <td style={{ padding: '12px 8px', width: 85, whiteSpace: 'nowrap' }}>
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-          {/* 1. Botón Editar / Desplegable (Lápiz) */}
+      <td style={{ padding: '12px 8px', width: 125, whiteSpace: 'nowrap' }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {/* 1. Botón Activar / Desactivar Carta */}
+          <button
+            type="button"
+            title={
+              producto.enCarta
+                ? 'Visible en la Carta - Clic para ocultar de la carta'
+                : 'Oculto de la Carta - Clic para mostrar en la carta'
+            }
+            onClick={handleToggleEnCarta}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: producto.enCarta
+                ? '1px solid rgba(228, 41, 38, 0.45)'
+                : '1px dashed var(--input-border)',
+              background: producto.enCarta
+                ? 'rgba(228, 41, 38, 0.14)'
+                : 'var(--input-bg)',
+              color: producto.enCarta
+                ? 'var(--brand-red, #e42926)'
+                : 'var(--text-faint, rgba(24, 27, 34, 0.4))',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+              opacity: producto.enCarta ? 1 : 0.45,
+            }}
+          >
+            <IconoCarta size={16} color={producto.enCarta ? 'var(--brand-red, #e42926)' : 'currentColor'} />
+          </button>
+
+          {/* 2. Botón Editar / Desplegable (Lápiz) */}
           <button
             type="button"
             title={
@@ -212,7 +264,7 @@ function FilaProducto({
             <IconoEditar />
           </button>
 
-          {/* 2. Botón Eliminar (Trash) */}
+          {/* 3. Botón Eliminar (Trash) */}
           <button
             type="button"
             title="Eliminar producto"
@@ -253,7 +305,7 @@ function DetalleProductoOtroInline({
   const [precio, setPrecio] = useState(String(producto.precio ?? ''))
   const [descripcion, setDescripcion] = useState(producto.descripcion ?? '')
   const [guardando, setGuardando] = useState(false)
-  const [mensaje, setMensaje] = useState<string | null>(null)
+  const [mensaje, setMensaje] = useState<{ texto: string; exito: boolean } | null>(null)
 
   const precioNum = Number(precio)
   const precioValido = Number.isFinite(precioNum) && precioNum > 0
@@ -268,9 +320,9 @@ function DetalleProductoOtroInline({
     setMensaje(null)
     try {
       await onGuardar(precioNum, descripcion)
-      setMensaje('✓ Cambios guardados correctamente.')
+      setMensaje({ texto: 'Cambios guardados correctamente.', exito: true })
     } catch {
-      setMensaje('Error al guardar los cambios.')
+      setMensaje({ texto: 'Error al guardar los cambios.', exito: false })
     } finally {
       setGuardando(false)
     }
@@ -344,7 +396,8 @@ function DetalleProductoOtroInline({
               gap: 4,
             }}
           >
-            <span>Ocultar</span> ✕
+            <span>Ocultar</span>
+            <IconoCruz size={12} strokeWidth={2.4} />
           </button>
         </div>
       </div>
@@ -355,8 +408,8 @@ function DetalleProductoOtroInline({
             label="Precio unitario ($)"
             id={`precio_${producto.id}`}
             type="number"
-            min="0.01"
-            step="0.01"
+            min="0"
+            step="1"
             value={precio}
             onChange={(e) => setPrecio(e.target.value)}
             required
@@ -385,13 +438,17 @@ function DetalleProductoOtroInline({
       {mensaje && (
         <p
           style={{
-            margin: '4px 0 0',
+            margin: '6px 0 0',
             fontSize: 12.5,
-            color: mensaje.startsWith('✓') ? 'var(--brand-green)' : 'var(--brand-red)',
+            color: mensaje.exito ? 'var(--brand-green)' : 'var(--brand-red)',
             fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
           }}
         >
-          {mensaje}
+          {mensaje.exito && <IconoCheck size={14} strokeWidth={2.4} />}
+          <span>{mensaje.texto}</span>
         </p>
       )}
     </div>
@@ -404,6 +461,7 @@ export function ProductosTable({
   productoExpandidoId,
   onToggleEditar,
   onCambiarActivo,
+  onToggleEnCarta,
   onEliminar,
   precios,
   tamanosVaso,
@@ -453,7 +511,7 @@ export function ProductosTable({
             <th style={{ padding: '8px 8px', width: 135 }}>Categoría</th>
             <th style={{ padding: '8px 8px', width: 110 }}>Presentaciones</th>
             <th style={{ padding: '8px 8px', width: 105 }}>Estado</th>
-            <th style={{ padding: '8px 8px', width: 85 }}>Acciones</th>
+            <th style={{ padding: '8px 8px', width: 125 }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
@@ -471,6 +529,7 @@ export function ProductosTable({
                   expandido={expandido}
                   onToggleEditar={onToggleEditar}
                   onCambiarActivo={onCambiarActivo}
+                  onToggleEnCarta={onToggleEnCarta}
                   onEliminar={onEliminar}
                 />
 
@@ -595,7 +654,8 @@ export function ProductosTable({
                                   gap: 4,
                                 }}
                               >
-                                <span>Ocultar</span> ✕
+                                <span>Ocultar</span>
+                                <IconoCruz size={12} strokeWidth={2.4} />
                               </button>
                             </div>
                           </div>

@@ -15,7 +15,7 @@ import type { TipoEntrega } from '../types/venta'
  * `actualizar-estado-transferencia` (mismo patrón `supabase.functions.invoke`
  * + extracción de mensaje de error ya usado en `ventasService.registrarVenta`):
  * `venta_pagos` no tiene ninguna política UPDATE bajo RLS para ningún rol
- * (🚫 total, ver migración `20260904000009_ventas_venta_pagos.sql`) — la
+ * (bloqueo total, ver migración `20260904000009_ventas_venta_pagos.sql`) — la
  * validación de propiedad (solo transferencias de las propias ventas del
  * Cajero) y de rol (CA-04) vive server-side.
  */

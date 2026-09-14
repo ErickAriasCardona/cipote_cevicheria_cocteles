@@ -52,7 +52,16 @@ export function UsuarioForm({ onCrear }: UsuarioFormProps) {
   }
 
   return (
-    <GlassCard padding="28px 30px" style={{ marginBottom: 28 }}>
+    <GlassCard
+      padding="28px 30px"
+      style={{
+        background: 'var(--modal-bg)',
+        border: '1px solid var(--modal-border)',
+        boxShadow: 'var(--modal-shadow)',
+        borderRadius: 20,
+        marginBottom: 28,
+      }}
+    >
       <h2
         style={{
           margin: '0 0 18px',

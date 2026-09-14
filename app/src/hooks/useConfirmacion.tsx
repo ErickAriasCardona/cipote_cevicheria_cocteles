@@ -5,10 +5,12 @@ import type { ButtonVariant } from '../components/ui/Button'
 
 export interface OpcionesConfirmacion {
   titulo?: string
-  mensaje: string
+  mensaje?: ReactNode
+  contenido?: ReactNode
   textoConfirmar?: string
   textoCancelar?: string
   varianteConfirmar?: ButtonVariant
+  anchoMaximo?: number | string
 }
 
 interface SolicitudConfirmacion extends OpcionesConfirmacion {
@@ -43,7 +45,9 @@ export function ConfirmacionProvider({ children }: { children: ReactNode }) {
       <ConfirmDialog
         abierto={solicitud !== null}
         titulo={solicitud?.titulo}
-        mensaje={solicitud?.mensaje ?? ''}
+        mensaje={solicitud?.mensaje}
+        contenido={solicitud?.contenido}
+        anchoMaximo={solicitud?.anchoMaximo}
         textoConfirmar={solicitud?.textoConfirmar}
         textoCancelar={solicitud?.textoCancelar}
         varianteConfirmar={solicitud?.varianteConfirmar}

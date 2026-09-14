@@ -17,7 +17,7 @@ import type { VentaPago } from '../types/ventaPago'
  * `productosService`/`insumosService` (CRUD directo bajo RLS), invoca la Edge
  * Function `registrar-venta` (mismo patrón `supabase.functions.invoke` que
  * `usuariosService.crearUsuario`): `ventas`/`venta_pagos` no tienen ninguna
- * política INSERT bajo RLS para ningún rol de aplicación (🚫 total, ver
+ * política INSERT bajo RLS para ningún rol de aplicación (bloqueo total, ver
  * migración `20260904000009_ventas_venta_pagos.sql`) — toda la validación
  * crítica (RN-006, RN-008, cálculo de insumos por receta) vive server-side.
  *
@@ -29,7 +29,7 @@ import type { VentaPago } from '../types/ventaPago'
  * `tamanos_vaso` embebidos para una tabla legible. `eliminarVenta`/
  * `restablecerVenta` (BD-07.1/07.2, RF-03.6) invocan la Edge Function
  * `eliminar-restablecer-venta`: `ventas` no tiene ninguna política UPDATE
- * bajo RLS para ningún rol (🚫 total, ni siquiera Administrador) — la
+ * bajo RLS para ningún rol (bloqueo total, ni siquiera Administrador) — la
  * transición de soft-delete con su trazabilidad (RN-009) vive exclusivamente
  * ahí, server-side.
  */
@@ -137,16 +137,29 @@ export const ventasService = {
   async registrarVenta(input: RegistrarVentaInput): Promise<RegistrarVentaResultado> {
     const { data, error } = await supabase.functions.invoke('registrar-venta', {
       body: {
+        items: input.items?.map((it) => ({
+          producto_id: it.productoId ?? null,
+          promocion_id: it.promocionId ?? null,
+          tamano_vaso_id: it.tamanoVasoId ?? null,
+          cantidad: it.cantidad,
+          precio: it.precio,
+          nombre: it.nombre,
+        })),
         producto_id: input.productoId ?? null,
         promocion_id: input.promocionId ?? null,
         tamano_vaso_id: input.tamanoVasoId ?? null,
-        cantidad: input.cantidad,
+        cantidad: input.cantidad ?? (input.items ? input.items.reduce((s, i) => s + i.cantidad, 0) : 1),
         tipo_entrega: input.tipoEntrega,
         observaciones: input.observaciones ?? null,
         pagos: input.pagos.map((pago) => ({
           metodo_pago: pago.metodoPago,
           monto: pago.monto,
         })),
+        cantidad_bolsas: input.cantidadBolsas ?? 0,
+        cantidad_bolsas_grande: input.cantidadBolsasGrande ?? 0,
+        cantidad_bolsas_mediana: input.cantidadBolsasMediana ?? 0,
+        cantidad_bolsas_pequena: input.cantidadBolsasPequena ?? 0,
+        cantidad_tapas: input.cantidadTapas ?? 0,
       },
     })
     if (error) {
@@ -163,14 +176,19 @@ export const ventasService = {
       throw error
     }
     return {
-      venta: mapVenta(data.venta as VentaRow),
+      venta: data.venta ? mapVenta(data.venta as VentaRow) : undefined,
+      ventas: Array.isArray(data.ventas)
+        ? (data.ventas as VentaRow[]).map(mapVenta)
+        : data.venta
+          ? [mapVenta(data.venta as VentaRow)]
+          : [],
       pagos: (data.pagos as VentaPagoRow[]).map(mapVentaPago),
     }
   },
 
   /** Listado administrativo de ventas con su estado de soft-delete y
    * trazabilidad (BD-07.2, RF-03.6). Lectura directa bajo RLS (política
-   * `ventas_select`, S✅ global para Administrador): incluye ventas
+   * `ventas_select`, SELECT permitido global para Administrador): incluye ventas
    * eliminadas a propósito, para poder restablecerlas. `productos(nombre)`/
    * `tamanos_vaso(etiqueta)` embebidos para no requerir consultas extra. */
   async listarVentasAdministrador(): Promise<VentaConEstadoEliminacion[]> {

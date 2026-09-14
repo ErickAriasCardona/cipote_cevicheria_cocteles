@@ -1,4 +1,5 @@
 import { WHATSAPP_NUMBER } from '../../config/landing'
+import { IconoWhatsApp } from '../ui/IconosFormas'
 
 export function LandingFooter() {
   return (
@@ -128,6 +129,7 @@ export function LandingFooter() {
               boxShadow: '0 4px 14px rgba(46, 158, 91, 0.4)',
             }}
           >
+            <IconoWhatsApp size={18} />
             <span>Escribir al WhatsApp (+57 314 549 9206)</span>
           </a>
         </div>

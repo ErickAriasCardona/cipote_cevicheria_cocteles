@@ -9,6 +9,7 @@ import { GlassCard } from '../ui/GlassCard'
 import { Input } from '../ui/Input'
 import { Textarea } from '../ui/Textarea'
 import { Button } from '../ui/Button'
+import { formatearCOP } from '../../utils/moneda'
 
 interface CierreCajaFormProps {
   tamanosVaso: TamanoVaso[]
@@ -123,8 +124,7 @@ export function CierreCajaForm({ tamanosVaso, transferencias = [], onCerrar }: C
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Tienes {pendientes.length} transferencia(s) pendiente(s) por confirmar ($
-              {totalMontoPendiente.toLocaleString('es-CO')})
+              Tienes {pendientes.length} transferencia(s) pendiente(s) por confirmar ({formatearCOP(totalMontoPendiente)})
             </span>
           </div>
           <p style={{ margin: 0, fontSize: 12.5, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
@@ -152,8 +152,8 @@ export function CierreCajaForm({ tamanosVaso, transferencias = [], onCerrar }: C
           label="Dinero contado físicamente (COP)"
           type="number"
           min="0"
-          step="0.01"
-          placeholder="0.00"
+          step="1"
+          placeholder="0"
           value={dineroContado}
           onChange={(e) => setDineroContado(e.target.value)}
           required

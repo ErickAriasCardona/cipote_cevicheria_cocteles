@@ -51,9 +51,9 @@ const ADMIN_MODULES: AdminModuleCard[] = [
     ),
   },
   {
-    to: '/administrador/receta',
-    title: 'Receta evolutiva',
-    desc: 'Insumos asociados y condiciones por preparación',
+    to: '/administrador/carta',
+    title: 'Carta y Promociones',
+    desc: 'Catálogo de carta, fotos y combos promocionales',
     tint: 'navy',
     icon: (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

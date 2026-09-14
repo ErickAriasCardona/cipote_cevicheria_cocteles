@@ -10,7 +10,9 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
 import { Chip } from '../ui/Chip'
+import { IconoCheck, IconoCruz } from '../ui/IconosFormas'
 import { combosUnidadPorCategoria, formatearUnidad, obtenerCombosDisponibles } from '../../utils/unidadMedida'
+import { formatearCOP } from '../../utils/moneda'
 
 interface ProductoFormProps {
   /** Fuente de verdad de las combinaciones de tamaño/presentación (tipo de
@@ -214,7 +216,7 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
 
       const ok = await confirmar({
         titulo: 'Crear producto',
-        mensaje: `¿Confirmas crear el producto "${nombreFinal}" en categoría "Otros" con precio $${precioDirectoNumerico.toLocaleString('es-CO', { minimumFractionDigits: 2 })}?`,
+        mensaje: `¿Confirmas crear el producto "${nombreFinal}" en categoría "Otros" con precio ${formatearCOP(precioDirectoNumerico)}?`,
         textoConfirmar: 'Crear producto',
       })
       if (!ok) return
@@ -453,11 +455,11 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                   label="Precio unitario ($)"
                   id="precio_directo"
                   type="number"
-                  min="0.01"
-                  step="0.01"
+                  min="0"
+                  step="1"
                   value={precioDirecto}
                   onChange={(e) => setPrecioDirecto(e.target.value)}
-                  placeholder="0.00"
+                  placeholder="0"
                   required
                 />
               </>
@@ -491,8 +493,9 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                     tamaños aquí.
                   </p>
                 ) : combosDisponibles.length === 0 ? (
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--brand-green)', fontWeight: 600 }}>
-                    ✓ Ya agregaste todas las presentaciones disponibles de esta categoría.
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--brand-green)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <IconoCheck size={14} strokeWidth={2.4} />
+                    <span>Ya agregaste todas las presentaciones disponibles de esta categoría.</span>
                   </p>
                 ) : (
                   <div className="form-add-row" style={{ paddingBottom: 4 }}>
@@ -520,11 +523,11 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                         label="Precio ($)"
                         id="precio_borrador"
                         type="number"
-                        min="0.01"
-                        step="0.01"
+                        min="0"
+                        step="1"
                         value={precioBorrador}
                         onChange={(e) => setPrecioBorrador(e.target.value)}
-                        placeholder="0.00"
+                        placeholder="0"
                       />
                     </div>
 
@@ -569,7 +572,7 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                       >
                         <span style={{ fontWeight: 600 }}>{formatearUnidad(fila.tipoUnidad, fila.valorUnidad)}</span>
                         <span style={{ color: 'var(--brand-red)', fontWeight: 700 }}>
-                          ${fila.precio.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+                          {formatearCOP(fila.precio)}
                         </span>
                         <button
                           type="button"
@@ -579,13 +582,15 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                             border: 'none',
                             cursor: 'pointer',
                             color: 'var(--brand-red)',
-                            fontWeight: 700,
                             padding: '0 2px',
-                            fontSize: 13,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                           }}
                           title="Quitar presentación"
+                          aria-label="Quitar presentación"
                         >
-                          ✕
+                          <IconoCruz size={12} strokeWidth={2.4} />
                         </button>
                       </div>
                     ))}

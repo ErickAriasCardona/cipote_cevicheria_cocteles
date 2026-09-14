@@ -100,9 +100,9 @@ function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsum
               fontWeight: 700,
               padding: '3px 8px',
               borderRadius: 6,
-              color: '#a855f7',
-              background: 'rgba(168, 85, 247, 0.12)',
-              border: '1px solid rgba(168, 85, 247, 0.3)',
+              color: 'var(--brand-blue)',
+              background: 'rgba(65, 175, 224, 0.12)',
+              border: '1px solid rgba(65, 175, 224, 0.3)',
               whiteSpace: 'nowrap',
             }}
           >

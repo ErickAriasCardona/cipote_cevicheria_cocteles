@@ -3,6 +3,7 @@ import type { ProductoTamanoPrecio } from '../../types/productoTamanoPrecio'
 import type { TamanoVaso } from '../../types/tamanoVaso'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { Button } from '../ui/Button'
+import { formatearCOP } from '../../utils/moneda'
 
 interface ProductoTamanoPrecioTableProps {
   filas: ProductoTamanoPrecio[]
@@ -53,7 +54,7 @@ function FilaProductoTamanoPrecio({ fila, etiqueta, onActualizarPrecio, onCambia
   async function handleGuardarPrecio() {
     const ok = await confirmar({
       titulo: 'Actualizar precio',
-      mensaje: `¿Confirmas cambiar el precio de "${etiqueta}" de $${fila.precio.toFixed(2)} a $${precioNumerico.toFixed(2)}?`,
+      mensaje: `¿Confirmas cambiar el precio de "${etiqueta}" de ${formatearCOP(fila.precio)} a ${formatearCOP(precioNumerico)}?`,
       textoConfirmar: 'Guardar',
       varianteConfirmar: 'blue',
     })
@@ -97,8 +98,8 @@ function FilaProductoTamanoPrecio({ fila, etiqueta, onActualizarPrecio, onCambia
         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
           <input
             type="number"
-            min="0.01"
-            step="0.01"
+            min="0"
+            step="1"
             value={precio}
             onChange={(e) => setPrecio(e.target.value)}
             style={{

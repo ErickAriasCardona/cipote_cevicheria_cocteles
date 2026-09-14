@@ -4,6 +4,7 @@ import type { TransferenciaTurno } from '../../services/transferenciasService'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { Button } from '../ui/Button'
 import { StatusPill } from '../ui/StatusPill'
+import { formatearCOP } from '../../utils/moneda'
 
 interface TransferenciasListProps {
   transferencias: TransferenciaTurno[]
@@ -40,8 +41,7 @@ function FilaTransferencia({ transferencia, onCambiarEstado }: FilaTransferencia
     onCambiarEstado(pago.id, estado)
   }
 
-  const fmt = (n: number) =>
-    '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  const fmt = (n: number) => formatearCOP(n)
 
   const pillVariant =
     estadoActual === 'exitosa'

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { InsumoForm } from './InsumoForm'
 import { Button } from '../ui/Button'
+import { IconoCruz } from '../ui/IconosFormas'
 import type { ActualizarInsumoInput, CrearInsumoInput, Insumo } from '../../types/insumo'
 
 interface InsumoCrearModalProps {
@@ -77,8 +78,8 @@ export function InsumoCrearModal({
         position: 'fixed',
         inset: 0,
         background: 'var(--modal-overlay)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
@@ -103,7 +104,7 @@ export function InsumoCrearModal({
       >
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button ref={cerrarRef} type="button" variant="secondary" size="sm" onClick={onCerrar}>
-            Cerrar ✕
+            <IconoCruz size={13} style={{ marginRight: 6 }} /> Cerrar
           </Button>
         </div>
 

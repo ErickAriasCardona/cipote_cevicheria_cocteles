@@ -8,11 +8,12 @@ import { CierresCajaPage } from '../pages/administrador/CierresCajaPage'
 import { GastosPage } from '../pages/administrador/GastosPage'
 import { InsumosPage } from '../pages/administrador/InsumosPage'
 import { ProductosPage } from '../pages/administrador/ProductosPage'
-import { RecetaPage } from '../pages/administrador/RecetaPage'
+import { CartaPage } from '../pages/administrador/CartaPage'
 import { ReportesVentasPage } from '../pages/administrador/ReportesVentasPage'
 import { UsuariosPage } from '../pages/administrador/UsuariosPage'
 import { VentasPage } from '../pages/administrador/VentasPage'
 import { CajeroDashboardPage } from '../pages/cajero/CajeroDashboardPage'
+import { CajeroGastosPage } from '../pages/cajero/CajeroGastosPage'
 import { CierreCajaPage } from '../pages/cajero/CierreCajaPage'
 import { TransferenciasPage } from '../pages/cajero/TransferenciasPage'
 import { VentaPage } from '../pages/cajero/VentaPage'
@@ -71,14 +72,18 @@ export function AppRouter() {
         }
       />
       <Route
-        path="/administrador/receta"
+        path="/administrador/carta"
         element={
           <AuthGuard>
             <RoleGuard rolesPermitidos={['administrador']}>
-              <RecetaPage />
+              <CartaPage />
             </RoleGuard>
           </AuthGuard>
         }
+      />
+      <Route
+        path="/administrador/receta"
+        element={<Navigate to="/administrador/carta" replace />}
       />
       <Route
         path="/administrador/ventas"
@@ -137,6 +142,16 @@ export function AppRouter() {
           <AuthGuard>
             <RoleGuard rolesPermitidos={['administrador', 'cajero']}>
               <VentaPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/cajero/gastos"
+        element={
+          <AuthGuard>
+            <RoleGuard rolesPermitidos={['administrador', 'cajero']}>
+              <CajeroGastosPage />
             </RoleGuard>
           </AuthGuard>
         }

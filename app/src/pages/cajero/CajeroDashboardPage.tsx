@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AperturaCajaForm } from '../../components/caja/AperturaCajaForm'
+import { IngresoVasosModal } from '../../components/caja/IngresoVasosModal'
 import { useSession } from '../../hooks/useSession'
 import { cajaService } from '../../services/cajaService'
 import type { TurnoCaja } from '../../types/turnoCaja'
@@ -8,6 +9,7 @@ import { AppShell } from '../../components/layout/AppShell'
 import { GlassCard } from '../../components/ui/GlassCard'
 import { StatusPill } from '../../components/ui/StatusPill'
 import { Button } from '../../components/ui/Button'
+import { formatearCOP } from '../../utils/moneda'
 
 /**
  * Panel del Cajero (BD-01.1, completado en BD-03 con apertura de caja; BD-04
@@ -17,6 +19,7 @@ import { Button } from '../../components/ui/Button'
 export function CajeroDashboardPage() {
   const { usuario } = useSession()
   const [turno, setTurno] = useState<TurnoCaja | null>(null)
+  const [modalVasosAbierto, setModalVasosAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -43,12 +46,9 @@ export function CajeroDashboardPage() {
     await cargarTurno()
   }
 
-  const fmt = (n: number) =>
-    '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' COP'
-
   return (
     <AppShell>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px 0' }}>
         {error && (
           <p role="alert" style={{ color: 'var(--red-text)', fontWeight: 600, textAlign: 'center' }}>
             {error}
@@ -60,11 +60,11 @@ export function CajeroDashboardPage() {
             <p style={{ color: 'var(--text-secondary)', margin: 0 }}>Consultando estado de caja…</p>
           </GlassCard>
         ) : turno ? (
-          <GlassCard style={{ maxWidth: 540, width: '100%', padding: '40px 40px', textAlign: 'center' }}>
+          <GlassCard style={{ maxWidth: 540, width: '100%', padding: '36px 32px', textAlign: 'center' }}>
             <h1
               style={{
                 margin: '0 0 16px',
-                fontSize: 28,
+                fontSize: 26,
                 fontWeight: 800,
                 letterSpacing: '-0.3px',
                 color: 'var(--text-primary)',
@@ -73,7 +73,7 @@ export function CajeroDashboardPage() {
               Panel Cajero
             </h1>
 
-            <div style={{ marginBottom: 30 }}>
+            <div style={{ marginBottom: 24 }}>
               <StatusPill variant="positive" dot>
                 Caja Abierta
               </StatusPill>
@@ -84,13 +84,13 @@ export function CajeroDashboardPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '16px 4px',
+                padding: '14px 4px',
                 borderBottom: '1px solid var(--hr-line)',
               }}
             >
               <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Dinero Inicial:</span>
               <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
-                {fmt(turno.dineroInicial)}
+                {formatearCOP(turno.dineroInicial)}
               </span>
             </div>
 
@@ -99,9 +99,9 @@ export function CajeroDashboardPage() {
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                padding: '16px 4px',
+                padding: '14px 4px',
                 borderBottom: '1px solid var(--hr-line)',
-                marginBottom: 28,
+                marginBottom: 24,
               }}
             >
               <span style={{ fontSize: 14, color: 'var(--text-secondary)' }}>Hora de Apertura:</span>
@@ -113,20 +113,37 @@ export function CajeroDashboardPage() {
               </span>
             </div>
 
-            <Link to="/cajero/venta" style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
-              <Button variant="primary" fullWidth size="lg">
-                Ir al POS de ventas →
-              </Button>
-            </Link>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Link to="/cajero/venta" style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
+                <Button variant="primary" fullWidth size="lg">
+                  Ir al POS de ventas →
+                </Button>
+              </Link>
 
-            <Link
-              to="/cajero/cierre"
-              style={{ textDecoration: 'none', display: 'block', width: '100%', marginTop: 12 }}
-            >
-              <Button variant="secondary" fullWidth size="md">
-                Cerrar caja →
+              <Link to="/cajero/gastos" style={{ textDecoration: 'none', display: 'block', width: '100%' }}>
+                <Button variant="secondary" fullWidth size="md">
+                  Gastos de Turno (Caja) →
+                </Button>
+              </Link>
+
+              <Button
+                variant="dashed"
+                fullWidth
+                size="md"
+                onClick={() => setModalVasosAbierto(true)}
+              >
+                + Ingresar Vasos para Venta
               </Button>
-            </Link>
+
+              <Link
+                to="/cajero/cierre"
+                style={{ textDecoration: 'none', display: 'block', width: '100%' }}
+              >
+                <Button variant="secondary" fullWidth size="md">
+                  Cerrar caja →
+                </Button>
+              </Link>
+            </div>
 
             <div style={{ marginTop: 16 }}>
               <Link
@@ -150,6 +167,14 @@ export function CajeroDashboardPage() {
           </GlassCard>
         )}
       </div>
+
+      {usuario && (
+        <IngresoVasosModal
+          usuarioId={usuario.usuarioId}
+          abierto={modalVasosAbierto}
+          onCerrar={() => setModalVasosAbierto(false)}
+        />
+      )}
     </AppShell>
   )
 }

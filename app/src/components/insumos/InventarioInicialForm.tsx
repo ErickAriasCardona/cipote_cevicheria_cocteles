@@ -5,6 +5,7 @@ import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Select } from '../ui/Select'
+import { IconoCheck } from '../ui/IconosFormas'
 
 interface InventarioInicialFormProps {
   insumosVaso: Insumo[]
@@ -121,8 +122,9 @@ export function InventarioInicialForm({ insumosVaso, onRegistrar }: InventarioIn
       )}
 
       {exito && (
-        <p style={{ margin: 0, color: 'var(--brand-green)', fontSize: 13, fontWeight: 600 }}>
-          ✓ {exito}
+        <p style={{ margin: 0, color: 'var(--brand-green)', fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <IconoCheck size={14} strokeWidth={2.4} />
+          <span>{exito}</span>
         </p>
       )}
 

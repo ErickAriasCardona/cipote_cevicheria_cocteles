@@ -16,6 +16,7 @@ import type { TamanoVaso, CategoriaTamanoVaso } from '../../types/tamanoVaso'
 import type { Insumo } from '../../types/insumo'
 import { AppShell } from '../../components/layout/AppShell'
 import { GlassCard } from '../../components/ui/GlassCard'
+import { ProductoBloqueadoModal } from '../../components/productos/ProductoBloqueadoModal'
 
 /**
  * Pantalla de gestión de productos y precios por tamaño (BD-02.2, RF-03.1/HU-03.1).
@@ -28,6 +29,11 @@ export function ProductosPage() {
   const [productoExpandidoId, setProductoExpandidoId] = useState<string | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [productoBloqueado, setProductoBloqueado] = useState<{
+    producto: Producto
+    motivo: 'ventas' | 'promocion' | 'otro'
+    mensajeDetalle?: string
+  } | null>(null)
 
   const cargarDatos = useCallback(async () => {
     setCargando(true)
@@ -101,17 +107,36 @@ export function ProductosPage() {
     await cargarDatos()
   }
 
+  async function handleToggleEnCartaProducto(id: string, enCarta: boolean) {
+    await productosService.actualizarProducto(id, { enCarta })
+    await cargarDatos()
+  }
+
   async function handleEliminarProducto(id: string, _nombre: string) {
     setError(null)
+    const prod = productos.find((p) => p.id === id) || null
     try {
       await productosService.eliminarProducto(id)
       if (productoExpandidoId === id) {
         setProductoExpandidoId(null)
       }
       await cargarDatos()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el producto.')
+    } catch (err: unknown) {
+      const errObj = err as { codigo?: string; motivo?: 'ventas' | 'promocion'; message?: string }
+      if (errObj?.codigo === '23503' && prod) {
+        setProductoBloqueado({
+          producto: prod,
+          motivo: errObj.motivo || 'ventas',
+          mensajeDetalle: errObj.message,
+        })
+      } else {
+        setError(err instanceof Error ? err.message : 'No se pudo eliminar el producto.')
+      }
     }
+  }
+
+  async function handleDesactivarDesdeModal(producto: Producto) {
+    await handleCambiarActivoProducto(producto.id, false)
   }
 
   async function handleCrearTamanoPrecio(input: ComboTamanoPrecioInput) {
@@ -212,6 +237,7 @@ export function ProductosPage() {
                 productoExpandidoId={productoExpandidoId}
                 onToggleEditar={handleToggleEditar}
                 onCambiarActivo={handleCambiarActivoProducto}
+                onToggleEnCarta={handleToggleEnCartaProducto}
                 onEliminar={handleEliminarProducto}
                 precios={precios}
                 tamanosVaso={tamanosVaso}
@@ -225,6 +251,15 @@ export function ProductosPage() {
             </GlassCard>
           </div>
         )}
+
+        <ProductoBloqueadoModal
+          abierto={productoBloqueado !== null}
+          producto={productoBloqueado?.producto ?? null}
+          motivo={productoBloqueado?.motivo ?? 'ventas'}
+          mensajeDetalle={productoBloqueado?.mensajeDetalle}
+          onDesactivar={handleDesactivarDesdeModal}
+          onCerrar={() => setProductoBloqueado(null)}
+        />
       </div>
     </AppShell>
   )

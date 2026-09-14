@@ -17,6 +17,7 @@ export interface CierreCaja {
   totalNequi: number
   totalRappi: number
   totalTransferenciaExitosa: number
+  totalGastosCaja: number
   totalEsperado: number
   /** dineroContado - totalEsperado. Positivo=sobró, negativo=faltó, 0=sin diferencia. */
   diferencia: number

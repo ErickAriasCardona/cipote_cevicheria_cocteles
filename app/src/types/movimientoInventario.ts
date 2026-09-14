@@ -13,6 +13,7 @@ export type TipoMovimientoInventario =
   | 'inventario_inicial'
   | 'conteo_apertura'
   | 'conteo_cierre'
+  | 'ingreso_vasos'
 
 export interface MovimientoInventario {
   id: string
@@ -24,6 +25,17 @@ export interface MovimientoInventario {
   usuarioId: string
   observaciones: string | null
   createdAt: string
+  insumoNombre?: string
+  insumoUnidad?: string
+  insumoTipo?: string
+  usuarioNombre?: string
+  usuarioRol?: string
+}
+
+export interface FiltrosKardex {
+  insumoId?: string
+  tipoMovimiento?: TipoMovimientoInventario | 'todos'
+  limite?: number
 }
 
 export type MomentoConteo = 'apertura' | 'cierre'
@@ -43,4 +55,27 @@ export interface RegistrarInventarioInicialInput {
   cantidad: number
   usuarioId: string
   observaciones?: string | null
+}
+
+/** Payload para registrar ingreso de vasos por parte de la cajera durante el turno */
+export interface RegistrarIngresoVasosInput {
+  insumoId: string
+  cantidad: number
+  usuarioId: string
+  observaciones?: string | null
+}
+
+export interface ReestablecerVasoItem {
+  insumoId: string
+  tamanoVasoId?: string
+  nombre: string
+  etiqueta?: string
+  stockActual: number
+  nuevoStock: number
+}
+
+export interface ReestablecerInventarioInput {
+  items: ReestablecerVasoItem[]
+  usuarioId: string
+  motivo?: string | null
 }

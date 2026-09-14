@@ -23,7 +23,7 @@ import type {
  * el INSERT con SQLSTATE 23505, que se propaga tal cual como error.
  *
  * `cerrarCaja` invoca la Edge Function `cerrar-caja` (BD-06.2): `cierres_caja`
- * y `conteo_vasos_cierre` no tienen ninguna política INSERT bajo RLS (🚫
+ * y `conteo_vasos_cierre` no tienen ninguna política INSERT bajo RLS (bloqueo
  * total, ver migración `20260905000002_cierres_caja_conteo_vasos.sql`) — todo
  * el cálculo del esperado/diferencia vive server-side (RN-003, el Cajero
  * nunca lo ve antes de guardar). `listarCierres`/`listarConteoVasosCierre` sí
@@ -63,6 +63,7 @@ interface CierreCajaRow {
   total_nequi: number
   total_rappi: number
   total_transferencia_exitosa: number
+  total_gastos_caja: number
   total_esperado: number
   diferencia: number
   cerrado_por: string
@@ -73,15 +74,16 @@ function mapCierre(row: CierreCajaRow): CierreCaja {
   return {
     id: row.id,
     turnoId: row.turno_id,
-    dineroContado: row.dinero_contado,
+    dineroContado: Number(row.dinero_contado),
     observaciones: row.observaciones,
-    totalEfectivo: row.total_efectivo,
-    totalTarjeta: row.total_tarjeta,
-    totalNequi: row.total_nequi,
-    totalRappi: row.total_rappi,
-    totalTransferenciaExitosa: row.total_transferencia_exitosa,
-    totalEsperado: row.total_esperado,
-    diferencia: row.diferencia,
+    totalEfectivo: Number(row.total_efectivo),
+    totalTarjeta: Number(row.total_tarjeta),
+    totalNequi: Number(row.total_nequi),
+    totalRappi: Number(row.total_rappi),
+    totalTransferenciaExitosa: Number(row.total_transferencia_exitosa),
+    totalGastosCaja: Number(row.total_gastos_caja ?? 0),
+    totalEsperado: Number(row.total_esperado),
+    diferencia: Number(row.diferencia),
     cerradoPor: row.cerrado_por,
     fechaCierre: row.fecha_cierre,
   }
@@ -102,9 +104,9 @@ function mapConteoVaso(row: ConteoVasoCierreRow): ConteoVasoCierre {
     id: row.id,
     turnoId: row.turno_id,
     tamanoVasoId: row.tamano_vaso_id,
-    cantidadTeorica: row.cantidad_teorica,
-    cantidadFisica: row.cantidad_fisica,
-    diferencia: row.diferencia,
+    cantidadTeorica: Number(row.cantidad_teorica),
+    cantidadFisica: Number(row.cantidad_fisica),
+    diferencia: Number(row.diferencia),
     createdAt: row.created_at,
   }
 }
@@ -115,7 +117,7 @@ function mapConteoVaso(row: ConteoVasoCierreRow): ConteoVasoCierre {
 // inferir el tipo de fila de `.select(...)` — mismo detalle ya respetado en
 // el resto de servicios (`SELECT_TURNO`, `SELECT_MOVIMIENTO`, etc.).
 const SELECT_CIERRE =
-  'id, turno_id, dinero_contado, observaciones, total_efectivo, total_tarjeta, total_nequi, total_rappi, total_transferencia_exitosa, total_esperado, diferencia, cerrado_por, fecha_cierre'
+  'id, turno_id, dinero_contado, observaciones, total_efectivo, total_tarjeta, total_nequi, total_rappi, total_transferencia_exitosa, total_gastos_caja, total_esperado, diferencia, cerrado_por, fecha_cierre'
 
 const SELECT_CONTEO_VASO =
   'id, turno_id, tamano_vaso_id, cantidad_teorica, cantidad_fisica, diferencia, created_at'

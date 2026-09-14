@@ -66,14 +66,7 @@ export function LandingServices() {
           Nuestros servicios
         </h2>
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 22,
-            textAlign: 'center',
-          }}
-        >
+        <div className="landing-services-grid">
           {/* 1. Pedido en línea */}
           <div>
             <div
@@ -103,12 +96,12 @@ export function LandingServices() {
                 <path d="M8 15h4" strokeLinecap="round" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
               Pedido en línea
             </span>
           </div>
 
-          {/* 2. Consumo en el lugar */}
+          {/* 2. Domicilios */}
           <div>
             <div
               style={{
@@ -128,21 +121,60 @@ export function LandingServices() {
               <svg
                 width="22"
                 height="22"
-                viewBox="0 0 20 20"
+                viewBox="0 0 24 24"
                 fill="none"
                 stroke="#c81e1e"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="5.5" cy="17.5" r="2.5" />
+                <circle cx="18.5" cy="17.5" r="2.5" />
+                <path d="M15 6h-2a2 2 0 0 0-2 2v3l-3 4h4.5l2-3.5h3.5" />
+                <path d="M17 9h2.5a1.5 1.5 0 0 1 1.5 1.5v3" />
+                <rect x="7" y="8" width="4" height="4" rx="1" />
+              </svg>
+            </div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+              Domicilios
+            </span>
+          </div>
+
+          {/* 3. Consumo en el lugar */}
+          <div>
+            <div
+              style={{
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                margin: '0 auto 12px',
+                background:
+                  'linear-gradient(160deg, rgba(65,175,224,0.24), rgba(65,175,224,0.08))',
+                border: '1px solid rgba(65,175,224,0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
+              }}
+            >
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="#0d3a52"
                 strokeWidth="1.6"
               >
                 <path d="M4 4h12v13H4z" />
                 <path d="M4 8h12" strokeLinecap="round" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
               Consumo en el lugar
             </span>
           </div>
 
-          {/* 3. Para llevar */}
+          {/* 4. Para llevar */}
           <div>
             <div
               style={{
@@ -171,12 +203,12 @@ export function LandingServices() {
                 <path d="M3 6.5v7l7 3.5 7-3.5v-7" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
               Para llevar
             </span>
           </div>
 
-          {/* 4. Nequi y tarjeta */}
+          {/* 5. Transferencia / Datafono */}
           <div>
             <div
               style={{
@@ -196,17 +228,25 @@ export function LandingServices() {
               <svg
                 width="22"
                 height="22"
-                viewBox="0 0 20 20"
+                viewBox="0 0 24 24"
                 fill="none"
                 stroke="#0d3a52"
-                strokeWidth="1.6"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
               >
-                <rect x="2" y="6" width="16" height="10" rx="2" />
-                <path d="M2 9h16" strokeLinecap="round" />
+                <rect x="3" y="3" width="18" height="18" rx="3" />
+                <rect x="6" y="6" width="12" height="4" rx="1" />
+                <line x1="6" y1="13" x2="8" y2="13" />
+                <line x1="11" y1="13" x2="13" y2="13" />
+                <line x1="16" y1="13" x2="18" y2="13" />
+                <line x1="6" y1="17" x2="8" y2="17" />
+                <line x1="11" y1="17" x2="13" y2="17" />
+                <line x1="16" y1="17" x2="18" y2="17" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22' }}>
-              Nequi y tarjeta
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+              Transferencia / Datafono
             </span>
           </div>
         </div>

@@ -84,8 +84,8 @@ export function NavDrawer({
         position: 'fixed',
         inset: 0,
         background: 'var(--modal-overlay)',
-        backdropFilter: 'blur(6px)',
-        WebkitBackdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
         zIndex: 1000,
       }}
     >
@@ -100,11 +100,9 @@ export function NavDrawer({
           right: 0,
           height: '100vh',
           width: 'min(320px, 85vw)',
-          background: 'var(--sheen), var(--glass-bg)',
-          backdropFilter: 'blur(28px) saturate(150%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(150%)',
-          borderLeft: '1px solid var(--glass-border)',
-          boxShadow: '-20px 0 50px rgba(0, 0, 0, 0.25)',
+          background: 'var(--modal-bg)',
+          borderLeft: '1px solid var(--modal-border)',
+          boxShadow: 'var(--modal-shadow)',
           display: 'flex',
           flexDirection: 'column',
           padding: '18px 18px 24px',
@@ -162,18 +160,17 @@ export function NavDrawer({
               onClick={onCerrar}
               style={({ isActive }) => ({
                 display: 'block',
-                padding: '11px 14px',
+                padding: '12px 16px',
                 borderRadius: 12,
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: 600,
                 textDecoration: 'none',
                 fontFamily: 'var(--sans)',
                 transition: 'all 0.15s ease',
-                background: isActive
-                  ? 'var(--sheen), linear-gradient(160deg, rgba(65, 175, 224, 0.34), rgba(65, 175, 224, 0.14))'
-                  : 'var(--sec-inactive-bg)',
-                color: isActive ? 'var(--sec-active-color)' : 'var(--sec-inactive-color)',
-                border: isActive ? '1px solid rgba(65, 175, 224, 0.35)' : '1px solid transparent',
+                background: isActive ? 'var(--sec-active-bg)' : 'var(--input-bg)',
+                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                border: '1px solid var(--input-border)',
+                boxShadow: isActive ? 'inset 0 1px 0 var(--pill-highlight)' : 'none',
               })}
             >
               {tab.label}

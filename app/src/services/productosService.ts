@@ -23,12 +23,14 @@ interface ProductoRow {
   descripcion: string | null
   precio: number | null
   precio_legado: number | null
+  imagen_url: string | null
   activo: boolean
+  en_carta?: boolean
   created_at: string
   updated_at: string
 }
 
-const COLUMNAS = 'id, nombre, categoria, descripcion, precio, precio_legado, activo, created_at, updated_at'
+const COLUMNAS = 'id, nombre, categoria, descripcion, precio, precio_legado, imagen_url, activo, en_carta, created_at, updated_at'
 
 function mapRow(row: ProductoRow): Producto {
   return {
@@ -38,7 +40,9 @@ function mapRow(row: ProductoRow): Producto {
     descripcion: row.descripcion,
     precio: row.precio,
     precioLegado: row.precio_legado,
+    imagenUrl: row.imagen_url,
     activo: row.activo,
+    enCarta: row.en_carta ?? true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
@@ -62,6 +66,8 @@ export const productosService = {
         categoria: input.categoria,
         descripcion: input.descripcion ?? null,
         precio: input.precio ?? null,
+        imagen_url: input.imagenUrl ?? null,
+        en_carta: input.enCarta ?? true,
       })
       .select(COLUMNAS)
       .single()
@@ -82,7 +88,9 @@ export const productosService = {
     if (cambios.categoria !== undefined) payload.categoria = cambios.categoria
     if (cambios.descripcion !== undefined) payload.descripcion = cambios.descripcion
     if (cambios.precio !== undefined) payload.precio = cambios.precio
+    if (cambios.imagenUrl !== undefined) payload.imagen_url = cambios.imagenUrl
     if (cambios.activo !== undefined) payload.activo = cambios.activo
+    if (cambios.enCarta !== undefined) payload.en_carta = cambios.enCarta
 
     const { data, error } = await supabase
       .from('productos')
@@ -105,9 +113,16 @@ export const productosService = {
     const { error } = await supabase.from('productos').delete().eq('id', id)
     if (error) {
       if (error.code === '23503') {
-        throw new Error(
-          'No se puede eliminar este producto porque ya tiene ventas registradas en el histórico. Puedes apagarlo (desactivarlo) para que no esté disponible para la venta.',
+        const detalle = `${error.details || ''} ${error.message || ''}`.toLowerCase()
+        const motivo = detalle.includes('promocion') ? 'promocion' : 'ventas'
+        const customError = new Error(
+          motivo === 'ventas'
+            ? 'No se puede eliminar este producto porque ya tiene ventas registradas en el histórico.'
+            : 'No se puede eliminar este producto porque está asignado a promociones o combos activos.',
         )
+        ;(customError as unknown as { codigo: string; motivo: 'ventas' | 'promocion' }).codigo = '23503'
+        ;(customError as unknown as { codigo: string; motivo: 'ventas' | 'promocion' }).motivo = motivo
+        throw customError
       }
       throw error
     }

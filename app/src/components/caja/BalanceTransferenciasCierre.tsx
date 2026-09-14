@@ -2,6 +2,8 @@ import type { CierreCaja } from '../../types/cierreCaja'
 import type { TransferenciaTurno } from '../../services/transferenciasService'
 import { StatusPill } from '../ui/StatusPill'
 import { etiquetaDiferenciaDinero } from '../../utils/formatoCierreCaja'
+import { formatearCOP } from '../../utils/moneda'
+import { IconoCheck } from '../ui/IconosFormas'
 
 interface BalanceTransferenciasCierreProps {
   cierre: CierreCaja
@@ -14,9 +16,6 @@ export function BalanceTransferenciasCierre({
   transferencias,
   cargandoTransferencias = false,
 }: BalanceTransferenciasCierreProps) {
-  const fmt = (n: number) =>
-    '$' + n.toLocaleString('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
   const exitosas = transferencias.filter((t) => t.pago.estadoTransferencia === 'exitosa')
   const pendientes = transferencias.filter((t) => t.pago.estadoTransferencia === 'pendiente')
   const rechazadas = transferencias.filter((t) => t.pago.estadoTransferencia === 'rechazada_cancelada')
@@ -26,6 +25,8 @@ export function BalanceTransferenciasCierre({
   const montoRechazadas = rechazadas.reduce((sum, t) => sum + Number(t.pago.monto), 0)
 
   const otrosMedios = Number(cierre.totalTarjeta) + Number(cierre.totalNequi) + Number(cierre.totalRappi)
+  const gastosCaja = Number(cierre.totalGastosCaja ?? 0)
+  const efectivoEsperado = Math.max(0, Number(cierre.totalEfectivo) - gastosCaja)
 
   const esDiferenciaPositivaOSinDiferencia = cierre.diferencia >= 0
   const colorResultado = esDiferenciaPositivaOSinDiferencia ? 'var(--green-text)' : 'var(--red-text)'
@@ -69,18 +70,37 @@ export function BalanceTransferenciasCierre({
               Físico
             </span>
           </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Ventas registradas:</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Ventas en efectivo:</span>
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              {fmt(cierre.totalEfectivo)}
+              {formatearCOP(cierre.totalEfectivo)}
             </span>
           </div>
+
+          {gastosCaja > 0 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--amber-text)' }}>
+              <span>(-) Gastos de caja:</span>
+              <span style={{ fontWeight: 700 }}>
+                -{formatearCOP(gastosCaja)}
+              </span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+            <span style={{ color: 'var(--text-secondary)' }}>Efectivo esperado:</span>
+            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+              {formatearCOP(efectivoEsperado)}
+            </span>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
             <span style={{ color: 'var(--text-secondary)' }}>Dinero contado:</span>
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              {fmt(cierre.dineroContado)}
+              {formatearCOP(cierre.dineroContado)}
             </span>
           </div>
+
           <div
             style={{
               display: 'flex',
@@ -129,7 +149,7 @@ export function BalanceTransferenciasCierre({
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
             <span style={{ color: 'var(--text-secondary)' }}>Exitosas (sumadas):</span>
             <span style={{ fontWeight: 700, color: 'var(--green-text)' }}>
-              {fmt(cierre.totalTransferenciaExitosa ?? montoExitosas)} ({exitosas.length})
+              {formatearCOP(cierre.totalTransferenciaExitosa ?? montoExitosas)} ({exitosas.length})
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
@@ -140,14 +160,14 @@ export function BalanceTransferenciasCierre({
                 color: montoPendientes > 0 ? 'var(--amber-text)' : 'var(--text-secondary)',
               }}
             >
-              {fmt(montoPendientes)} ({pendientes.length})
+              {formatearCOP(montoPendientes)} ({pendientes.length})
             </span>
           </div>
           {montoRechazadas > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
               <span style={{ color: 'var(--text-secondary)' }}>Rechazadas:</span>
               <span style={{ fontWeight: 600, color: 'var(--red-text)' }}>
-                {fmt(montoRechazadas)} ({rechazadas.length})
+                {formatearCOP(montoRechazadas)} ({rechazadas.length})
               </span>
             </div>
           )}
@@ -162,7 +182,7 @@ export function BalanceTransferenciasCierre({
           >
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Total transferencias:</span>
             <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>
-              {fmt(cierre.totalTransferenciaExitosa)}
+              {formatearCOP(cierre.totalTransferenciaExitosa)}
             </span>
           </div>
         </div>
@@ -197,15 +217,15 @@ export function BalanceTransferenciasCierre({
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-            <span style={{ color: 'var(--text-secondary)' }}>Tarjeta / Nequi / Rappi:</span>
+            <span style={{ color: 'var(--text-secondary)' }}>Datáfono / Nequi / Rappi:</span>
             <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-              {fmt(otrosMedios)}
+              {formatearCOP(otrosMedios)}
             </span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
             <span style={{ color: 'var(--text-secondary)' }}>Total esperado ventas:</span>
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-              {fmt(cierre.totalEsperado)}
+              {formatearCOP(cierre.totalEsperado)}
             </span>
           </div>
           <div
@@ -219,8 +239,67 @@ export function BalanceTransferenciasCierre({
           >
             <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Efectivo + Transf.:</span>
             <span style={{ fontWeight: 800, color: 'var(--brand-blue)' }}>
-              {fmt(Number(cierre.totalEfectivo) + Number(cierre.totalTransferenciaExitosa))}
+              {formatearCOP(Number(cierre.totalEfectivo) + Number(cierre.totalTransferenciaExitosa))}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Desglose individual de los 5 métodos de pago según ventas */}
+      <div
+        style={{
+          padding: 16,
+          borderRadius: 14,
+          border: '1px solid var(--input-border)',
+          background: 'var(--sheen), var(--input-bg)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+            Ventas por Método de Pago
+          </h4>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Total ventas: {formatearCOP(cierre.totalEsperado)}
+          </span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--card-border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>Efectivo</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
+              {formatearCOP(cierre.totalEfectivo)}
+            </div>
+          </div>
+
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(56, 139, 253, 0.05)', border: '1px solid rgba(56, 139, 253, 0.25)' }}>
+            <div style={{ fontSize: 11, color: 'var(--brand-blue)', fontWeight: 600 }}>Transferencia bancaria</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
+              {formatearCOP(cierre.totalTransferenciaExitosa)}
+            </div>
+          </div>
+
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(65, 175, 224, 0.08)', border: '1px solid rgba(65, 175, 224, 0.25)' }}>
+            <div style={{ fontSize: 11, color: 'var(--brand-blue)', fontWeight: 600 }}>Nequi</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
+              {formatearCOP(cierre.totalNequi)}
+            </div>
+          </div>
+
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(255, 68, 31, 0.05)', border: '1px solid rgba(255, 68, 31, 0.25)' }}>
+            <div style={{ fontSize: 11, color: '#ff441f', fontWeight: 600 }}>Rappi</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
+              {formatearCOP(cierre.totalRappi)}
+            </div>
+          </div>
+
+          <div style={{ padding: '10px 12px', borderRadius: 8, background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
+            <div style={{ fontSize: 11, color: 'var(--brand-green)', fontWeight: 600 }}>Datáfono</div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', marginTop: 4 }}>
+              {formatearCOP(cierre.totalTarjeta)}
+            </div>
           </div>
         </div>
       </div>
@@ -243,7 +322,7 @@ export function BalanceTransferenciasCierre({
           <div>
             <strong>Atención:</strong> En este turno quedaron{' '}
             <strong>{pendientes.length} transferencia(s) pendiente(s)</strong> por un total de{' '}
-            <strong>{fmt(montoPendientes)}</strong>. Por regla de negocio (RN-007), no fueron sumadas
+            <strong>{formatearCOP(montoPendientes)}</strong>. Por regla de negocio (RN-007), no fueron sumadas
             al total esperado del cierre.
           </div>
         </div>
@@ -329,18 +408,19 @@ export function BalanceTransferenciasCierre({
                         })}
                       </td>
                       <td style={{ padding: '8px 12px', color: 'var(--text-primary)' }}>
-                        Venta ({t.venta.cantidad} {t.venta.cantidad === 1 ? 'vaso' : 'vasos'} — {fmt(t.venta.total)})
+                        Venta ({t.venta.cantidad} {t.venta.cantidad === 1 ? 'vaso' : 'vasos'} — {formatearCOP(t.venta.total)})
                       </td>
                       <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                        {fmt(t.pago.monto)}
+                        {formatearCOP(t.pago.monto)}
                       </td>
                       <td style={{ padding: '8px 12px' }}>
                         <StatusPill variant={variant}>{label}</StatusPill>
                       </td>
                       <td style={{ padding: '8px 12px', fontSize: 11.5 }}>
                         {est === 'exitosa' ? (
-                          <span style={{ color: 'var(--green-text)', fontWeight: 600 }}>
-                            ✓ Contabilizada en total
+                          <span style={{ color: 'var(--green-text)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <IconoCheck size={12} strokeWidth={2.4} />
+                            <span>Contabilizada en total</span>
                           </span>
                         ) : est === 'pendiente' ? (
                           <span style={{ color: 'var(--amber-text)', fontWeight: 600 }}>

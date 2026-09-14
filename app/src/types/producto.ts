@@ -18,7 +18,10 @@ export interface Producto {
   precio: number | null
   /** Precio único que tenía el producto antes de la corrección de tamaños. */
   precioLegado: number | null
+  imagenUrl?: string | null
   activo: boolean
+  /** Si el producto está habilitado para mostrarse en la carta pública de la landing page. */
+  enCarta: boolean
   createdAt: string
   updatedAt: string
 }
@@ -29,6 +32,8 @@ export interface CrearProductoInput {
   categoria: CategoriaProducto
   descripcion?: string | null
   precio?: number | null
+  imagenUrl?: string | null
+  enCarta?: boolean
 }
 
 /** Cambios permitidos sobre un producto ya existente. */
@@ -37,5 +42,7 @@ export interface ActualizarProductoInput {
   categoria?: CategoriaProducto
   descripcion?: string | null
   precio?: number | null
+  imagenUrl?: string | null
   activo?: boolean
+  enCarta?: boolean
 }

@@ -67,6 +67,7 @@ interface CierreCajaRow {
   dinero_contado: string
   observaciones: string | null
   total_efectivo: string
+  total_gastos_caja: string
   total_tarjeta: string
   total_nequi: string
   total_rappi: string
@@ -283,7 +284,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // 4) Cantidad teórica por insumo-vaso: suma con signo de
-      // movimientos_inventario (positivo inventario_inicial, negativo venta)
+      // movimientos_inventario (positivo inventario_inicial, conteo_apertura, ingreso_vasos, negativo venta)
       // — tal como especifica el diccionario de datos, no leyendo
       // insumos.stock_actual directamente.
       const insumoIds = tamanosActivos.map((t) => t.insumo_id)
@@ -292,7 +293,7 @@ Deno.serve(async (req: Request) => {
         `select insumo_id, sum(cantidad) as teorico
          from public.movimientos_inventario
          where insumo_id in (${placeholders})
-           and tipo_movimiento in ('inventario_inicial', 'conteo_apertura', 'venta')
+           and tipo_movimiento in ('inventario_inicial', 'conteo_apertura', 'conteo_cierre', 'venta', 'ingreso_vasos', 'ajuste_manual')
          group by insumo_id`,
         insumoIds,
       )
@@ -338,15 +339,30 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // 5.1) Gastos de caja del turno (salidas de efectivo de la gaveta física).
+      // Solo descuentan si están efectivamente pagados / desembolsados (estado_pago = 'pagado').
+      const gastosResult = await transaction.queryObject<{ total_gastos_caja: string }>(
+        `select coalesce(sum(monto), 0) as total_gastos_caja
+         from public.gastos
+         where turno_id = $1 and origen = 'caja' and (estado_pago is null or estado_pago = 'pagado')`,
+        [turnoId],
+      )
+      const totalGastosCajaCentavos = centavos(num(gastosResult.rows[0]?.total_gastos_caja ?? 0))
+      const totalGastosCaja = totalGastosCajaCentavos / 100
+
+      // El efectivo esperado en caja descuenta las salidas por gastos de caja del turno.
+      const totalEfectivoEsperadoCentavos = Math.max(0, totalEfectivoCentavos - totalGastosCajaCentavos)
+
       const totalEsperadoCentavos =
-        totalEfectivoCentavos +
+        totalEfectivoEsperadoCentavos +
         totalTarjetaCentavos +
         totalNequiCentavos +
         totalRappiCentavos +
         totalTransferenciaExitosaCentavos
 
       const dineroContadoCentavos = centavos(datos.dineroContado)
-      const diferenciaCentavos = dineroContadoCentavos - totalEsperadoCentavos
+      // La diferencia en efectivo se evalúa contra el efectivo neto esperado en gaveta
+      const diferenciaCentavos = dineroContadoCentavos - totalEfectivoEsperadoCentavos
 
       const totalEfectivo = totalEfectivoCentavos / 100
       const totalTarjeta = totalTarjetaCentavos / 100
@@ -359,11 +375,11 @@ Deno.serve(async (req: Request) => {
       // 6) INSERT cierres_caja (snapshot inmutable).
       const cierreResult = await transaction.queryObject<CierreCajaRow>(
         `insert into public.cierres_caja
-           (turno_id, dinero_contado, observaciones, total_efectivo, total_tarjeta,
+           (turno_id, dinero_contado, observaciones, total_efectivo, total_gastos_caja, total_tarjeta,
             total_nequi, total_rappi, total_transferencia_exitosa, total_esperado,
             diferencia, cerrado_por)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         returning id, turno_id, dinero_contado, observaciones, total_efectivo, total_tarjeta,
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         returning id, turno_id, dinero_contado, observaciones, total_efectivo, total_gastos_caja, total_tarjeta,
            total_nequi, total_rappi, total_transferencia_exitosa, total_esperado, diferencia,
            cerrado_por, fecha_cierre`,
         [
@@ -371,6 +387,7 @@ Deno.serve(async (req: Request) => {
           datos.dineroContado,
           datos.observaciones,
           totalEfectivo,
+          totalGastosCaja,
           totalTarjeta,
           totalNequi,
           totalRappi,
@@ -397,6 +414,28 @@ Deno.serve(async (req: Request) => {
           [turnoId, tamano.id, cantidadTeorica, enviado.cantidadFisica, diferenciaVaso],
         )
         conteosInsertados.push(conteoResult.rows[0])
+
+        // 7.1) Sincronizar el inventario general con el conteo físico real de cierre
+        // Registrar en movimientos_inventario el ajuste de cierre para que quede en el Kardex
+        // con la diferencia exacta y el stock_resultante igual a la cantidad física contada.
+        await transaction.queryObject(
+          `insert into public.movimientos_inventario
+             (insumo_id, tipo_movimiento, cantidad, stock_resultante, usuario_id, observaciones)
+           values ($1, 'conteo_cierre', $2, $3, $4, $5)`,
+          [
+            tamano.insumo_id,
+            diferenciaVaso,
+            enviado.cantidadFisica,
+            caller.id,
+            `Cierre de turno: conteo físico ${enviado.cantidadFisica}, teórico ${cantidadTeorica}, diferencia ${diferenciaVaso >= 0 ? '+' : ''}${diferenciaVaso}`,
+          ],
+        )
+
+        // 7.2) Actualizar insumos.stock_actual al conteo físico verificado con el que cierra la caja
+        await transaction.queryObject(
+          `update public.insumos set stock_actual = $1, updated_at = now() where id = $2`,
+          [enviado.cantidadFisica, tamano.insumo_id],
+        )
       }
 
       // 8) UPDATE turnos_caja (guarda de carrera: solo si seguía abierto).
@@ -422,6 +461,7 @@ Deno.serve(async (req: Request) => {
             dinero_contado: num(cierre.dinero_contado),
             observaciones: cierre.observaciones,
             total_efectivo: num(cierre.total_efectivo),
+            total_gastos_caja: num(cierre.total_gastos_caja),
             total_tarjeta: num(cierre.total_tarjeta),
             total_nequi: num(cierre.total_nequi),
             total_rappi: num(cierre.total_rappi),
