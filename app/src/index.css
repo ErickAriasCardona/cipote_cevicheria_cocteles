@@ -80,67 +80,67 @@
 }
 
 [data-theme="dark"] {
-  --screen-bg: linear-gradient(160deg, #0d1420 0%, #0a0d14 55%, #100b14 100%);
+  --screen-bg: linear-gradient(160deg, #070c14 0%, #0a111c 50%, #0d1726 100%);
   --orb1-color: #e42926;
-  --orb1-opacity: 0.16;
+  --orb1-opacity: 0.12;
   --orb2-color: #41afe0;
-  --orb2-opacity: 0.12;
+  --orb2-opacity: 0.14;
 
-  --glass-bg: rgba(255, 255, 255, 0.045);
-  --glass-border: rgba(255, 255, 255, 0.09);
-  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 20px 60px rgba(0, 0, 0, 0.3);
-  --sheen: linear-gradient(165deg, rgba(255, 255, 255, 0.35), transparent 45%);
+  --glass-bg: rgba(13, 20, 32, 0.82);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --sheen: linear-gradient(165deg, rgba(255, 255, 255, 0.08), transparent 50%);
 
   --text-primary: #f5f7fa;
-  --text-secondary: rgba(245, 247, 250, 0.55);
-  --text-faint: rgba(245, 247, 250, 0.35);
+  --text-secondary: rgba(245, 247, 250, 0.65);
+  --text-faint: rgba(245, 247, 250, 0.4);
   --red-text: #ff6b66;
   --green-text: #4cc585;
   --hr-line: rgba(255, 255, 255, 0.08);
 
-  --tabs-wrap-bg: rgba(255, 255, 255, 0.05);
-  --tabs-wrap-border: rgba(255, 255, 255, 0.08);
-  --sec-active-bg: rgba(65, 175, 224, 0.28);
+  --tabs-wrap-bg: rgba(13, 20, 32, 0.65);
+  --tabs-wrap-border: rgba(255, 255, 255, 0.1);
+  --sec-active-bg: rgba(65, 175, 224, 0.24);
   --sec-active-color: #ffffff;
-  --sec-inactive-bg: rgba(255, 255, 255, 0.05);
-  --sec-inactive-color: rgba(245, 247, 250, 0.55);
+  --sec-inactive-bg: rgba(13, 20, 32, 0.45);
+  --sec-inactive-color: rgba(245, 247, 250, 0.6);
 
-  --input-bg: rgba(255, 255, 255, 0.05);
+  --input-bg: rgba(7, 12, 20, 0.65);
   --input-border: rgba(255, 255, 255, 0.12);
-  --input-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  --input-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
 
-  --dashed-bg: rgba(255, 255, 255, 0.04);
-  --dashed-border: rgba(255, 255, 255, 0.22);
+  --dashed-bg: rgba(13, 20, 32, 0.45);
+  --dashed-border: rgba(255, 255, 255, 0.18);
   --dashed-color: rgba(245, 247, 250, 0.7);
 
-  --pill-highlight: rgba(255, 255, 255, 0.16);
+  --pill-highlight: rgba(255, 255, 255, 0.12);
   --green-dot-shadow: 0 0 10px rgba(46, 158, 91, 0.7);
 
-  --opt-inactive-bg: rgba(255, 255, 255, 0.04);
-  --opt-inactive-border: rgba(255, 255, 255, 0.09);
+  --opt-inactive-bg: rgba(13, 20, 32, 0.45);
+  --opt-inactive-border: rgba(255, 255, 255, 0.08);
   --opt-inactive-color: rgba(245, 247, 250, 0.6);
-  --opt-active-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.35), transparent 45%),
-    linear-gradient(135deg, rgba(65, 175, 224, 0.4), rgba(65, 175, 224, 0.2));
+  --opt-active-bg: linear-gradient(165deg, rgba(255, 255, 255, 0.1), transparent 45%),
+    linear-gradient(135deg, rgba(65, 175, 224, 0.35), rgba(65, 175, 224, 0.18));
   --opt-active-border: rgba(92, 194, 238, 0.55);
   --opt-active-color: #ffffff;
   --opt-active-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 14px rgba(65, 175, 224, 0.3);
 
-  --modal-overlay: rgba(3, 7, 18, 0.48);
-  --modal-bg: #151e2e;
-  --modal-border: rgba(255, 255, 255, 0.12);
-  --modal-shadow: 0 25px 60px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --card-bg: #151e2e;
+  --modal-overlay: rgba(3, 7, 14, 0.7);
+  --modal-bg: #0d1420;
+  --modal-border: rgba(255, 255, 255, 0.1);
+  --modal-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --card-bg: #0d1420;
   --card-border: rgba(255, 255, 255, 0.1);
-  --footer-bg: #070e17;
-  --bg-wave: #0a0d14;
+  --footer-bg: #060a12;
+  --bg-wave: #0d1726;
 
-  --nav-glass-bg: rgba(13, 20, 32, 0.72);
+  --nav-glass-bg: rgba(13, 20, 32, 0.82);
   --nav-glass-border: rgba(255, 255, 255, 0.1);
   --nav-glass-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
-  --dropdown-bg: rgba(18, 24, 38, 0.96);
-  --dropdown-border: rgba(255, 255, 255, 0.14);
-  --dropdown-shadow: 0 16px 36px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --dropdown-bg: rgba(13, 20, 32, 0.96);
+  --dropdown-border: rgba(255, 255, 255, 0.12);
+  --dropdown-shadow: 0 16px 36px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
   --dropdown-item-hover: rgba(65, 175, 224, 0.18);
   --dropdown-item-selected: rgba(65, 175, 224, 0.28);
 
@@ -928,7 +928,7 @@ bloque (incluido navbar-user-role) queda oculto por .navbar-desktop-content. */
   box-shadow: 0 26px 50px rgba(15, 20, 30, 0.16);
   transition: transform 0.25s ease-out, opacity 0.3s ease;
   animation: fadeInUp 0.5s ease both;
-  background: #fff;
+  background: var(--card-bg);
   position: relative;
 }
 
@@ -937,12 +937,12 @@ bloque (incluido navbar-user-role) queda oculto por .navbar-desktop-content. */
   bottom: -24px;
   right: -14px;
   width: min(250px, 75%);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52));
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(15, 20, 30, 0.08);
+  background: var(--sheen), var(--glass-bg);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--glass-border);
   border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 20px 40px rgba(15, 20, 30, 0.18);
+  box-shadow: var(--glass-shadow);
   padding: 16px 18px;
   animation: fadeInUp 0.4s ease both;
   z-index: 3;

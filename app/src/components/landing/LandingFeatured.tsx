@@ -156,10 +156,10 @@ export function LandingFeatured() {
                 marginBottom: 8,
               }}
             >
-              <span style={{ fontSize: 13.5, fontWeight: 800, color: '#181B22' }}>
+              <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text-primary)' }}>
                 {currentSlide.name}
               </span>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(24,27,34,0.5)' }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)' }}>
                 {currentSlide.subBadge}
               </span>
             </div>
@@ -184,7 +184,7 @@ export function LandingFeatured() {
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 15, fontWeight: 800, color: '#181B22' }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
                 {fmtCOP(currentSlide.singlePrice)}
               </span>
               <button
@@ -288,7 +288,7 @@ export function LandingFeatured() {
                     width: active ? 28 : 10,
                     background: active
                       ? 'linear-gradient(135deg, #e42926, #c81e1e)'
-                      : 'rgba(15, 20, 30, 0.2)',
+                      : 'var(--tabs-wrap-bg)',
                     boxShadow: active
                       ? '0 2px 8px rgba(228, 41, 38, 0.45)'
                       : 'none',

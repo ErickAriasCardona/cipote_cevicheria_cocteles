@@ -35,7 +35,7 @@ export function LandingFooter() {
             display: 'block',
             width: 'calc(100% + 1.3px)',
             height: 36,
-            color: 'var(--card-bg)',
+            color: 'var(--bg-wave)',
           }}
         >
           <path

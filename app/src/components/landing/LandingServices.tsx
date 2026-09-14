@@ -43,13 +43,12 @@ export function LandingServices() {
       <div
         style={{
           width: '100%',
-          background:
-            'linear-gradient(165deg, rgba(255,255,255,0.55), rgba(255,255,255,0.25))',
-          backdropFilter: 'blur(20px) saturate(140%)',
-          WebkitBackdropFilter: 'blur(20px) saturate(140%)',
-          border: '1px solid rgba(15,20,30,0.07)',
+          background: 'var(--sheen), var(--glass-bg)',
+          backdropFilter: 'blur(24px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+          border: '1px solid var(--glass-border)',
           borderRadius: 26,
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.6), 0 16px 40px rgba(15,20,30,0.08)',
+          boxShadow: 'var(--glass-shadow)',
           padding: '40px 6%',
         }}
       >
@@ -60,7 +59,7 @@ export function LandingServices() {
             fontWeight: 800,
             letterSpacing: '-0.4px',
             margin: '0 0 30px',
-            color: '#181B22',
+            color: 'var(--text-primary)',
           }}
         >
           Nuestros servicios
@@ -96,7 +95,7 @@ export function LandingServices() {
                 <path d="M8 15h4" strokeLinecap="round" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>
               Pedido en línea
             </span>
           </div>
@@ -135,7 +134,7 @@ export function LandingServices() {
                 <rect x="7" y="8" width="4" height="4" rx="1" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>
               Domicilios
             </span>
           </div>
@@ -169,7 +168,7 @@ export function LandingServices() {
                 <path d="M4 8h12" strokeLinecap="round" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>
               Consumo en el lugar
             </span>
           </div>
@@ -203,7 +202,7 @@ export function LandingServices() {
                 <path d="M3 6.5v7l7 3.5 7-3.5v-7" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>
               Para llevar
             </span>
           </div>
@@ -245,7 +244,7 @@ export function LandingServices() {
                 <line x1="16" y1="17" x2="18" y2="17" />
               </svg>
             </div>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#181B22', display: 'block', lineHeight: 1.3 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', display: 'block', lineHeight: 1.3 }}>
               Transferencia / Datafono
             </span>
           </div>

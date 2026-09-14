@@ -95,7 +95,7 @@ export function LandingHero() {
               lineHeight: 1.08,
               letterSpacing: '-1px',
               margin: '0 0 18px',
-              color: '#181B22',
+              color: 'var(--text-primary)',
             }}
           >
             Ceviche fresco, sabor bien cipote
@@ -104,7 +104,7 @@ export function LandingHero() {
             style={{
               fontSize: 16,
               lineHeight: 1.6,
-              color: 'rgba(24, 27, 34, 0.6)',
+              color: 'var(--text-secondary)',
               maxWidth: 420,
               margin: '0 0 30px',
             }}
@@ -135,14 +135,13 @@ export function LandingHero() {
               style={{
                 padding: '14px 26px',
                 borderRadius: 999,
-                background:
-                  'linear-gradient(165deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.35))',
-                border: '1px solid rgba(15, 20, 30, 0.08)',
-                color: '#181B22',
+                background: 'var(--tabs-wrap-bg)',
+                border: '1px solid var(--tabs-wrap-border)',
+                color: 'var(--text-primary)',
                 fontWeight: 700,
                 fontSize: 14.5,
                 textDecoration: 'none',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+                boxShadow: 'inset 0 1px 0 var(--pill-highlight)',
                 display: 'inline-block',
                 transition: 'transform 0.25s ease',
               }}

@@ -45,12 +45,12 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
       style={{
         animation: 'fadeInUp 0.7s ease both',
         transition: 'box-shadow 0.25s ease, transform 0.25s ease',
-        background: 'linear-gradient(165deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.3))',
-        backdropFilter: 'blur(20px) saturate(140%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(140%)',
-        border: '1px solid rgba(15, 20, 30, 0.07)',
+        background: 'var(--sheen), var(--glass-bg)',
+        backdropFilter: 'blur(24px) saturate(160%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+        border: '1px solid var(--glass-border)',
         borderRadius: 24,
-        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 16px 40px rgba(15, 20, 30, 0.08)',
+        boxShadow: 'var(--glass-shadow)',
         padding: '52px 20px 22px',
         textAlign: 'center',
         position: 'relative',
@@ -73,7 +73,7 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
           borderRadius: '50%',
           overflow: 'hidden',
           boxShadow: '0 12px 26px rgba(15, 20, 30, 0.2), inset 0 0 0 4px rgba(255, 255, 255, 0.7)',
-          background: '#fff',
+          background: 'var(--card-bg)',
         }}
       >
         <img
@@ -100,19 +100,19 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
           display: 'flex',
           alignItems: 'center',
           gap: 4,
-          background: 'rgba(255, 255, 255, 0.7)',
+          background: 'var(--tabs-wrap-bg)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
-          border: '1px solid rgba(15, 20, 30, 0.08)',
+          border: '1px solid var(--glass-border)',
           borderRadius: 999,
           padding: '5px 10px',
-          boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 4px 10px rgba(15, 20, 30, 0.1)',
+          boxShadow: 'inset 0 1px 0 var(--pill-highlight)',
         }}
       >
         <svg width="12" height="12" viewBox="0 0 20 20" fill="#E42926">
           <path d="M10 1l2.6 5.9 6.4.6-4.8 4.3 1.4 6.2L10 14.9 4.4 18l1.4-6.2L1 7.5l6.4-.6z" />
         </svg>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#181B22' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>
           {producto.rating}
         </span>
       </div>
@@ -122,7 +122,7 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
           margin: '14px 0 4px',
           fontSize: 16.5,
           fontWeight: 700,
-          color: '#181B22',
+          color: 'var(--text-primary)',
         }}
       >
         {producto.nombre}
@@ -132,7 +132,7 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
         style={{
           margin: '0 0 10px',
           fontSize: 12.5,
-          color: 'rgba(24, 27, 34, 0.55)',
+          color: 'var(--text-secondary)',
           minHeight: 32,
           lineHeight: 1.3,
         }}
@@ -170,10 +170,10 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
                   border: 'none',
                   transition: 'all 0.15s ease',
                   background: active
-                    ? 'linear-gradient(160deg, rgba(65,175,224,0.4), rgba(65,175,224,0.18))'
-                    : 'rgba(15,20,30,0.05)',
-                  color: active ? '#0d3a52' : 'rgba(24,27,34,0.55)',
-                  boxShadow: active ? 'inset 0 1px 0 rgba(255,255,255,0.5)' : 'none',
+                    ? 'var(--sec-active-bg)'
+                    : 'var(--opt-inactive-bg)',
+                  color: active ? 'var(--sec-active-color)' : 'var(--opt-inactive-color)',
+                  boxShadow: active ? 'inset 0 1px 0 var(--pill-highlight)' : 'none',
                 }}
               >
                 {sz.etiqueta}
@@ -181,7 +181,7 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
             )
           })
         ) : (
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(24,27,34,0.45)', padding: '4px 8px' }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', padding: '4px 8px' }}>
             Presentación única
           </span>
         )}
@@ -194,10 +194,10 @@ export function ProductoMenuCard({ producto, minWidth, maxWidth }: ProductoMenuC
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: 8,
-          borderTop: '1px solid rgba(15,20,30,0.06)',
+          borderTop: '1px solid var(--hr-line)',
         }}
       >
-        <span style={{ fontSize: 15, fontWeight: 800, color: '#181B22' }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)' }}>
           {fmtCOP(precioActual)}
         </span>
         <button

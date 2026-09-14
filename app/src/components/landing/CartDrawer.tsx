@@ -85,14 +85,14 @@ export function CartDrawer() {
   }
 
   const CHIP_ACTIVE = {
-    background: 'linear-gradient(160deg, rgba(65,175,224,0.4), rgba(65,175,224,0.18))',
-    color: '#0d3a52',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5)',
+    background: 'var(--sec-active-bg)',
+    color: 'var(--sec-active-color)',
+    boxShadow: 'inset 0 1px 0 var(--pill-highlight)',
   }
 
   const CHIP_INACTIVE = {
-    background: 'rgba(15,20,30,0.05)',
-    color: 'rgba(24,27,34,0.55)',
+    background: 'var(--opt-inactive-bg)',
+    color: 'var(--opt-inactive-color)',
   }
 
   return (
@@ -124,18 +124,17 @@ export function CartDrawer() {
           bottom: 0,
           height: '100vh',
           width: 'min(390px, 92vw)',
-          background:
-            'linear-gradient(165deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.82))',
-          backdropFilter: 'blur(28px) saturate(150%)',
-          WebkitBackdropFilter: 'blur(28px) saturate(150%)',
-          borderLeft: '1px solid rgba(15, 20, 30, 0.08)',
-          boxShadow: '-20px 0 50px rgba(0, 0, 0, 0.22)',
+          background: 'var(--modal-bg)',
+          backdropFilter: 'blur(24px) saturate(160%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+          borderLeft: '1px solid var(--glass-border)',
+          boxShadow: 'var(--modal-shadow)',
           zIndex: 1310,
           padding: '24px 20px',
           overflowY: 'auto',
           boxSizing: 'border-box',
           fontFamily: "'Inter', sans-serif",
-          color: '#181B22',
+          color: 'var(--text-primary)',
           animation: 'drawerIn 0.28s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
@@ -156,8 +155,8 @@ export function CartDrawer() {
               width: 32,
               height: 32,
               borderRadius: '50%',
-              border: 'none',
-              background: 'rgba(15, 20, 30, 0.06)',
+              border: '1px solid var(--input-border)',
+              background: 'var(--input-bg)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -181,13 +180,13 @@ export function CartDrawer() {
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '12px 0',
-                    borderBottom: '1px solid rgba(15, 20, 30, 0.08)',
+                    borderBottom: '1px solid var(--hr-line)',
                     gap: 10,
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 700 }}>{it.name}</div>
-                    <div style={{ fontSize: 11.5, color: 'rgba(24, 27, 34, 0.5)' }}>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-secondary)' }}>
                       {it.size} · {fmtCOP(it.unitPrice)}
                     </div>
                   </div>
@@ -200,8 +199,8 @@ export function CartDrawer() {
                         width: 26,
                         height: 26,
                         borderRadius: 8,
-                        border: '1px solid rgba(15, 20, 30, 0.12)',
-                        background: 'rgba(15, 20, 30, 0.04)',
+                        border: '1px solid var(--input-border)',
+                        background: 'var(--input-bg)',
                         cursor: 'pointer',
                         color: 'var(--text-primary)',
                         display: 'flex',
@@ -229,8 +228,8 @@ export function CartDrawer() {
                         width: 26,
                         height: 26,
                         borderRadius: 8,
-                        border: '1px solid rgba(15, 20, 30, 0.12)',
-                        background: 'rgba(15, 20, 30, 0.04)',
+                        border: '1px solid var(--input-border)',
+                        background: 'var(--input-bg)',
                         cursor: 'pointer',
                         color: 'var(--text-primary)',
                         display: 'flex',
@@ -272,7 +271,7 @@ export function CartDrawer() {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '16px 0',
-                borderTop: '2px solid rgba(15, 20, 30, 0.1)',
+                borderTop: '2px solid var(--hr-line)',
                 marginTop: 6,
               }}
             >
@@ -283,7 +282,7 @@ export function CartDrawer() {
             {/* Subformulario de checkout */}
             <div
               style={{
-                borderTop: '1px solid rgba(15, 20, 30, 0.08)',
+                borderTop: '1px solid var(--hr-line)',
                 paddingTop: 16,
                 marginTop: 4,
                 display: 'flex',
@@ -295,7 +294,7 @@ export function CartDrawer() {
                 style={{
                   fontSize: 13,
                   fontWeight: 700,
-                  color: '#181B22',
+                  color: 'var(--text-primary)',
                   marginBottom: 8,
                   display: 'block',
                 }}
@@ -327,7 +326,7 @@ export function CartDrawer() {
                     style={{
                       display: 'block',
                       fontSize: 11.5,
-                      color: 'rgba(24, 27, 34, 0.55)',
+                      color: 'var(--text-secondary)',
                       margin: '6px 0 4px',
                     }}
                   >
@@ -340,15 +339,15 @@ export function CartDrawer() {
                     onChange={(e) => setDireccion(e.target.value)}
                     style={{
                       width: '100%',
-                      background: 'rgba(15, 20, 30, 0.04)',
-                      border: '1px solid rgba(15, 20, 30, 0.14)',
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--input-border)',
                       borderRadius: 10,
                       padding: '10px 12px',
-                      color: '#181B22',
+                      color: 'var(--text-primary)',
                       fontSize: 13,
                       fontFamily: "'Inter', sans-serif",
                       boxSizing: 'border-box',
-                      boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)',
+                      boxShadow: 'var(--input-shadow)',
                     }}
                   />
                 </>
@@ -358,7 +357,7 @@ export function CartDrawer() {
                 style={{
                   display: 'block',
                   fontSize: 11.5,
-                  color: 'rgba(24, 27, 34, 0.55)',
+                  color: 'var(--text-secondary)',
                   margin: '10px 0 4px',
                 }}
               >
@@ -371,15 +370,15 @@ export function CartDrawer() {
                 onChange={(e) => setNombreRecibe(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(15, 20, 30, 0.04)',
-                  border: '1px solid rgba(15, 20, 30, 0.14)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
                   borderRadius: 10,
                   padding: '10px 12px',
-                  color: '#181B22',
+                  color: 'var(--text-primary)',
                   fontSize: 13,
                   fontFamily: "'Inter', sans-serif",
                   boxSizing: 'border-box',
-                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)',
+                  boxShadow: 'var(--input-shadow)',
                 }}
               />
 
@@ -387,7 +386,7 @@ export function CartDrawer() {
                 style={{
                   display: 'block',
                   fontSize: 11.5,
-                  color: 'rgba(24, 27, 34, 0.55)',
+                  color: 'var(--text-secondary)',
                   margin: '10px 0 4px',
                 }}
               >
@@ -400,15 +399,15 @@ export function CartDrawer() {
                 onChange={(e) => setContactoRecibe(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(15, 20, 30, 0.04)',
-                  border: '1px solid rgba(15, 20, 30, 0.14)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
                   borderRadius: 10,
                   padding: '10px 12px',
-                  color: '#181B22',
+                  color: 'var(--text-primary)',
                   fontSize: 13,
                   fontFamily: "'Inter', sans-serif",
                   boxSizing: 'border-box',
-                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)',
+                  boxShadow: 'var(--input-shadow)',
                 }}
               />
 
@@ -416,7 +415,7 @@ export function CartDrawer() {
                 style={{
                   display: 'block',
                   fontSize: 11.5,
-                  color: 'rgba(24, 27, 34, 0.55)',
+                  color: 'var(--text-secondary)',
                   margin: '10px 0 4px',
                 }}
               >
@@ -427,15 +426,15 @@ export function CartDrawer() {
                 onChange={(e) => setMetodoPago(e.target.value)}
                 style={{
                   width: '100%',
-                  background: 'rgba(15, 20, 30, 0.04)',
-                  border: '1px solid rgba(15, 20, 30, 0.14)',
+                  background: 'var(--input-bg)',
+                  border: '1px solid var(--input-border)',
                   borderRadius: 10,
                   padding: '10px 12px',
-                  color: '#181B22',
+                  color: 'var(--text-primary)',
                   fontSize: 13,
                   fontFamily: "'Inter', sans-serif",
                   boxSizing: 'border-box',
-                  boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)',
+                  boxShadow: 'var(--input-shadow)',
                   cursor: 'pointer',
                 }}
               >
@@ -451,7 +450,7 @@ export function CartDrawer() {
                     style={{
                       display: 'block',
                       fontSize: 11.5,
-                      color: 'rgba(24, 27, 34, 0.55)',
+                      color: 'var(--text-secondary)',
                       margin: '10px 0 4px',
                     }}
                   >
@@ -464,15 +463,15 @@ export function CartDrawer() {
                     onChange={(e) => setEfectivoConQuePaga(e.target.value)}
                     style={{
                       width: '100%',
-                      background: 'rgba(15, 20, 30, 0.04)',
-                      border: '1px solid rgba(15, 20, 30, 0.14)',
+                      background: 'var(--input-bg)',
+                      border: '1px solid var(--input-border)',
                       borderRadius: 10,
                       padding: '10px 12px',
-                      color: '#181B22',
+                      color: 'var(--text-primary)',
                       fontSize: 13,
                       fontFamily: "'Inter', sans-serif",
                       boxSizing: 'border-box',
-                      boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)',
+                      boxShadow: 'var(--input-shadow)',
                     }}
                   />
                   {vueltasNote && (

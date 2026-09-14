@@ -29,8 +29,8 @@ export function GlassCard({
 
   const baseStyle: CSSProperties = {
     background: `${tintPrefix}var(--sheen), var(--glass-bg)`,
-    backdropFilter: 'blur(24px) saturate(140%)',
-    WebkitBackdropFilter: 'blur(24px) saturate(140%)',
+    backdropFilter: 'blur(24px) saturate(160%)',
+    WebkitBackdropFilter: 'blur(24px) saturate(160%)',
     border: '1px solid var(--glass-border)',
     borderRadius: radius,
     boxShadow: 'var(--glass-shadow)',
