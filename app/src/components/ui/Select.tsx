@@ -26,6 +26,22 @@ interface MenuCoords {
   placeAbove: boolean
 }
 
+function extractTextFromNode(node: ReactNode): string {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return ''
+  }
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node)
+  }
+  if (Array.isArray(node)) {
+    return node.map(extractTextFromNode).join('')
+  }
+  if (isValidElement<{ children?: ReactNode }>(node) && node.props.children !== undefined) {
+    return extractTextFromNode(node.props.children)
+  }
+  return ''
+}
+
 function parseOptionsFromChildren(children: ReactNode): SelectOption[] {
   const result: SelectOption[] = []
   Children.forEach(children, (child) => {
@@ -33,11 +49,12 @@ function parseOptionsFromChildren(children: ReactNode): SelectOption[] {
       const props = child.props
       const val = props.value !== undefined ? String(props.value) : ''
       let lbl = ''
-      if (typeof props.children === 'string' || typeof props.children === 'number') {
-        lbl = String(props.children)
-      } else if (props.label) {
+      if (props.label) {
         lbl = String(props.label)
-      } else {
+      } else if (props.children !== undefined && props.children !== null) {
+        lbl = extractTextFromNode(props.children).trim()
+      }
+      if (!lbl) {
         lbl = val
       }
       result.push({

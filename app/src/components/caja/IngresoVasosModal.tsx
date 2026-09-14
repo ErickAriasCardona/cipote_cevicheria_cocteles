@@ -66,10 +66,12 @@ export function IngresoVasosModal({
               : insumo
                 ? Math.round(insumo.stockActual)
                 : 0
+          const nombreInsumo = insumo?.nombre?.trim() || (t.etiqueta ? `Vaso ${t.etiqueta}` : 'Vaso')
+          const categoriaTexto = t.categoria === 'ceviche' ? 'Ceviche' : 'Granizado'
           return {
             id: t.id,
             insumoId: t.insumoId!,
-            etiqueta: `Vaso ${t.etiqueta} (${t.categoria === 'ceviche' ? 'Ceviche' : 'Granizado'})`,
+            etiqueta: `${nombreInsumo} (${categoriaTexto})`,
             stockDia: unidadesDia,
             categoria: t.categoria ?? 'ceviche',
             onzas: t.onzas ?? ordenOnzas[t.etiqueta] ?? 0,
@@ -219,10 +221,18 @@ export function IngresoVasosModal({
             value={insumoId}
             onChange={(e) => setInsumoId(e.target.value)}
             required
+            options={vasos.map((v) => ({
+              value: v.insumoId,
+              label: `${v.etiqueta} — Stock del Día: ${v.stockDia} unds`,
+            }))}
           >
             {vasos.map((v) => (
-              <option key={v.insumoId} value={v.insumoId}>
-                {v.etiqueta} — Stock del Día: {v.stockDia} unds
+              <option
+                key={v.insumoId}
+                value={v.insumoId}
+                label={`${v.etiqueta} — Stock del Día: ${v.stockDia} unds`}
+              >
+                {`${v.etiqueta} — Stock del Día: ${v.stockDia} unds`}
               </option>
             ))}
           </Select>
