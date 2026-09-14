@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { GlassCard } from '../ui/GlassCard'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { formatearCOP } from '../../utils/moneda'
-import { ventasService } from '../../services/ventasService'
-import { insumosService } from '../../services/insumosService'
+// import { useEffect } from 'react'
+// import { ventasService } from '../../services/ventasService'
+// import { insumosService } from '../../services/insumosService'
 
 interface AperturaCajaFormProps {
   /** Nombre del cajero autenticado, solo para mostrar (HU-02.1 CA-02: el
@@ -22,12 +23,13 @@ interface AperturaCajaFormProps {
  */
 export function AperturaCajaForm({ nombreCajero, onAbrir }: AperturaCajaFormProps) {
   const [dineroInicial, setDineroInicial] = useState('')
-  const [vasosApertura, setVasosApertura] = useState<{ id: string; etiqueta: string; stock: number }[]>([])
-  const [cargandoVasos, setCargandoVasos] = useState(true)
+  // const [vasosApertura, setVasosApertura] = useState<{ id: string; etiqueta: string; stock: number }[]>([])
+  // const [cargandoVasos, setCargandoVasos] = useState(true)
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { confirmar } = useConfirmacion()
 
+  /*
   useEffect(() => {
     let activo = true
     async function cargarVasos() {
@@ -74,6 +76,7 @@ export function AperturaCajaForm({ nombreCajero, onAbrir }: AperturaCajaFormProp
       activo = false
     }
   }, [])
+  */
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -139,6 +142,7 @@ export function AperturaCajaForm({ nombreCajero, onAbrir }: AperturaCajaFormProp
           required
         />
 
+        {/* Sección de inventario de vasos en apertura de caja comentada para producción según requerimiento
         <div
           style={{
             marginTop: 16,
@@ -198,6 +202,7 @@ export function AperturaCajaForm({ nombreCajero, onAbrir }: AperturaCajaFormProp
             Inicias tu turno con las existencias operativas asignadas para el día. Si requieres abastecer más vasos durante la jornada, podrás registrarlos con el botón <strong>&quot;+ Ingresar Vasos&quot;</strong>.
           </p>
         </div>
+        */}
 
         {error && (
           <p role="alert" style={{ margin: '8px 0 16px', fontSize: 13, fontWeight: 600, color: 'var(--red-text)' }}>
