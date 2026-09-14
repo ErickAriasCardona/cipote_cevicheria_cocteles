@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useSession } from '../../hooks/useSession'
 import { useTheme } from '../../theme/useTheme'
@@ -49,6 +50,24 @@ export function LandingNav() {
   const [menuAbierto, setMenuAbierto] = useState(false)
 
   const roleHome = usuario?.rol === 'administrador' ? '/administrador' : '/cajero'
+
+  useEffect(() => {
+    if (!menuAbierto) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setMenuAbierto(false)
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuAbierto])
 
   return (
     <header className="landing-nav-header">
@@ -297,138 +316,152 @@ export function LandingNav() {
         </div>
       </div>
 
-      {/* Drawer Móvil */}
-      {menuAbierto && (
-        <div
-          role="presentation"
-          onClick={() => setMenuAbierto(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'var(--modal-overlay)',
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
-            zIndex: 1100,
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label="Menú móvil"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              bottom: 0,
-              width: 'min(320px, 86vw)',
-              background: 'var(--screen-bg)',
-              borderLeft: '1px solid var(--input-border)',
-              padding: '24px 20px',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '-10px 0 40px rgba(0,0,0,0.25)',
-              animation: 'drawerIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <img src="/logo.jpeg" alt="Logo Cipote" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
-                <span style={{ fontFamily: 'var(--brand-font)', fontSize: 18, color: 'var(--text-primary)' }}>
-                  Cipote
-                </span>
+      {/* Drawer Móvil montado via createPortal en document.body */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          menuAbierto ? (
+            <div
+              role="presentation"
+              onClick={() => setMenuAbierto(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                background: 'rgba(5, 12, 24, 0.65)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                zIndex: 99998,
+                animation: 'fadeIn 0.2s ease-out',
+                pointerEvents: 'auto',
+              }}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="Menú de navegación"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: '100dvh',
+                  width: 'min(330px, 86vw)',
+                  background: 'var(--modal-bg)',
+                  color: 'var(--text-primary)',
+                  borderLeft: '1px solid var(--modal-border)',
+                  padding: '24px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '-10px 0 50px rgba(0, 0, 0, 0.45)',
+                  animation: 'drawerSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                  boxSizing: 'border-box',
+                  overflowY: 'auto',
+                  pointerEvents: 'auto',
+                  zIndex: 99999,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <img src="/logo.jpeg" alt="Logo Cipote" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} />
+                    <span style={{ fontFamily: 'var(--brand-font)', fontSize: 20, color: 'var(--text-primary)' }}>
+                      Cipote
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMenuAbierto(false)}
+                    aria-label="Cerrar menú"
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 12,
+                      border: '1px solid var(--input-border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <IconoCerrar />
+                  </button>
+                </div>
+
+                <nav style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+                  {NAV_LINKS.map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      onClick={() => setMenuAbierto(false)}
+                      style={{
+                        padding: '13px 18px',
+                        borderRadius: 14,
+                        fontSize: 15,
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        textDecoration: 'none',
+                        background: 'var(--input-bg)',
+                        border: '1px solid var(--input-border)',
+                        display: 'block',
+                        transition: 'background 0.15s ease, transform 0.15s ease',
+                      }}
+                    >
+                      {link.label}
+                    </a>
+                  ))}
+                </nav>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 20, borderTop: '1px solid var(--hr-line)' }}>
+                  <Link
+                    to={usuario ? roleHome : '/login'}
+                    onClick={() => setMenuAbierto(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '13px',
+                      borderRadius: 14,
+                      background: 'linear-gradient(160deg, #f1544f, #E42926 45%, #c81e1e)',
+                      color: '#fff',
+                      textDecoration: 'none',
+                      fontSize: 14,
+                      fontWeight: 700,
+                      boxShadow: '0 4px 14px rgba(228, 41, 38, 0.35)',
+                    }}
+                  >
+                    <IconoPOS />
+                    <span>{usuario ? 'Ir al Panel' : 'Ingresar al POS'}</span>
+                  </Link>
+
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '11px',
+                      borderRadius: 14,
+                      border: '1px solid var(--input-border)',
+                      background: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
+                      fontSize: 13.5,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {theme === 'light' ? <IconoLuna /> : <IconoSol />}
+                    <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setMenuAbierto(false)}
-                aria-label="Cerrar menú"
-                style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 10,
-                  border: '1px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--text-primary)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <IconoCerrar />
-              </button>
             </div>
-
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-              {NAV_LINKS.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMenuAbierto(false)}
-                  style={{
-                    padding: '12px 16px',
-                    borderRadius: 12,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    textDecoration: 'none',
-                    background: 'var(--input-bg)',
-                    border: '1px solid var(--input-border)',
-                  }}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 20, borderTop: '1px solid var(--hr-line)' }}>
-              <Link
-                to={usuario ? roleHome : '/login'}
-                onClick={() => setMenuAbierto(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '12px',
-                  borderRadius: 12,
-                  background: 'linear-gradient(160deg, #f1544f, #E42926 45%, #c81e1e)',
-                  color: '#fff',
-                  textDecoration: 'none',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  boxShadow: '0 4px 14px rgba(228, 41, 38, 0.35)',
-                }}
-              >
-                <IconoPOS />
-                <span>{usuario ? 'Ir al Panel' : 'Ingresar al POS'}</span>
-              </Link>
-
-              <button
-                type="button"
-                onClick={toggleTheme}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '10px',
-                  borderRadius: 12,
-                  border: '1px solid var(--input-border)',
-                  background: 'var(--input-bg)',
-                  color: 'var(--text-primary)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {theme === 'light' ? <IconoLuna /> : <IconoSol />}
-                <span>{theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          ) : null,
+          document.body
+        )}
     </header>
   )
 }

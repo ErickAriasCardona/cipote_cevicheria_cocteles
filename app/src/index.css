@@ -1063,7 +1063,7 @@ bloque (incluido navbar-user-role) queda oculto por .navbar-desktop-content. */
   right: 0;
   bottom: 0;
   width: min(980px, 94vw);
-  background: var(--screen-bg);
+  background: var(--modal-bg);
   box-shadow: -15px 0 50px rgba(0, 0, 0, 0.28);
   border-left: 1px solid var(--glass-border);
   display: flex;
@@ -1134,6 +1134,20 @@ bloque (incluido navbar-user-role) queda oculto por .navbar-desktop-content. */
   }
 }
 
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
 
-
-
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
