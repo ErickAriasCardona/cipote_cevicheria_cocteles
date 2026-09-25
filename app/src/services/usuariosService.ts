@@ -53,6 +53,7 @@ export const usuariosService = {
         email: input.email,
         password: input.password,
         rol: input.rol,
+        redirectTo: `${window.location.origin}/login?confirmed=true`,
       },
     })
     if (error) {

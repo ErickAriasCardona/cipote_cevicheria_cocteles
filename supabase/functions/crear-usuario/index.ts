@@ -109,67 +109,75 @@ Deno.serve(async (req: Request) => {
     )
   }
 
-  // 1. Generar enlace de verificación y crear usuario con estado no verificado
-  const redirectTo = `${frontendUrl.replace(/\/+$/, '')}/login?confirmed=true`
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'signup',
-    email: datos.email,
-    password: datos.password,
-    options: {
-      data: { nombre_completo: datos.nombreCompleto },
-      redirectTo,
-    },
-  })
+  const redirectTo =
+    (typeof body?.redirectTo === 'string' && body.redirectTo.trim().length > 0)
+      ? body.redirectTo.trim()
+      : `${frontendUrl.replace(/\/+$/, '')}/login?confirmed=true`
 
-  if (linkError || !linkData?.user) {
-    const errorMsg = linkError?.message?.includes('already been registered')
-      ? 'Ya existe un usuario registrado con este correo electrónico.'
-      : (linkError?.message ?? 'No se pudo crear el usuario en el sistema de autenticación.')
-    return jsonResponse({ error: errorMsg }, 422)
-  }
+  const puedeUsarResend =
+    Boolean(resendApiKey) &&
+    (!resendFromEmail.includes('resend.dev') || datos.email === 'eariassena19@gmail.com')
 
-  const userId = linkData.user.id
-  let actionLink = linkData.properties?.action_link ?? redirectTo
-  try {
-    const urlObj = new URL(actionLink)
-    urlObj.searchParams.set('redirect_to', redirectTo)
-    actionLink = urlObj.toString()
-  } catch {
-    // fallback
-  }
+  let userId: string
 
-  // 2. Insertar fila en usuarios_perfil
-  const { data: perfil, error: perfilError } = await supabaseAdmin
-    .from('usuarios_perfil')
-    .insert({
-      id: userId,
-      nombre_completo: datos.nombreCompleto,
-      rol: datos.rol,
-      activo: true,
+  if (puedeUsarResend) {
+    // 1A. FLUJO RESEND CON PLANTILLA DE MARCA (cuando hay dominio propio verificado o es la cuenta autorizada de prueba)
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email: datos.email,
+      password: datos.password,
+      options: {
+        data: { nombre_completo: datos.nombreCompleto },
+        redirectTo,
+      },
     })
-    .select('id, nombre_completo, rol, activo, created_at, updated_at')
-    .single()
 
-  if (perfilError || !perfil) {
-    // Compensación: eliminar el usuario de auth.users
-    await supabaseAdmin.auth.admin.deleteUser(userId)
-    return jsonResponse(
-      { error: perfilError?.message ?? 'No se pudo crear el perfil del usuario.' },
-      500,
-    )
-  }
+    if (linkError || !linkData?.user) {
+      const errorMsg = linkError?.message?.includes('already been registered')
+        ? 'Ya existe un usuario registrado con este correo electrónico.'
+        : (linkError?.message ?? 'No se pudo crear el usuario en el sistema de autenticación.')
+      return jsonResponse({ error: errorMsg }, 422)
+    }
 
-  // 3. Enviar correo de confirmación con Resend
-  const emailHtml = generarEmailConfirmacionHtml({
-    nombreCompleto: datos.nombreCompleto,
-    email: datos.email,
-    password: datos.password,
-    rol: datos.rol,
-    actionLink,
-    logoUrl: `${frontendUrl.replace(/\/+$/, '')}/logo.jpeg`,
-  })
+    userId = linkData.user.id
+    let actionLink = linkData.properties?.action_link ?? redirectTo
+    try {
+      const urlObj = new URL(actionLink)
+      urlObj.searchParams.set('redirect_to', redirectTo)
+      actionLink = urlObj.toString()
+    } catch {
+      // fallback
+    }
 
-  if (resendApiKey) {
+    // Insertar fila en usuarios_perfil
+    const { data: perfil, error: perfilError } = await supabaseAdmin
+      .from('usuarios_perfil')
+      .insert({
+        id: userId,
+        nombre_completo: datos.nombreCompleto,
+        rol: datos.rol,
+        activo: true,
+      })
+      .select('id, nombre_completo, rol, activo, created_at, updated_at')
+      .single()
+
+    if (perfilError || !perfil) {
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+      return jsonResponse(
+        { error: perfilError?.message ?? 'No se pudo crear el perfil del usuario.' },
+        500,
+      )
+    }
+
+    const emailHtml = generarEmailConfirmacionHtml({
+      nombreCompleto: datos.nombreCompleto,
+      email: datos.email,
+      password: datos.password,
+      rol: datos.rol,
+      actionLink,
+      logoUrl: `${frontendUrl.replace(/\/+$/, '')}/logo.jpeg`,
+    })
+
     try {
       const resendRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -188,119 +196,110 @@ Deno.serve(async (req: Request) => {
       if (!resendRes.ok) {
         const resendErr = await resendRes.text()
         console.error('Error enviando correo con Resend:', resendErr)
-
-        // Si el fallo de Resend se debe a restricciones de dominio de prueba
-        // (por ejemplo: "You can only send testing emails to your own email address..."),
-        // despachamos el correo de verificación directamente vía Supabase Auth para que
-        // le llegue a la bandeja del usuario y mantenga el estado no confirmado (email_confirmed_at = null).
-        const esErrorRestriccionDominio =
-          resendRes.status === 403 ||
-          resendErr.toLowerCase().includes('testing emails') ||
-          resendErr.toLowerCase().includes('validation_error') ||
-          resendErr.toLowerCase().includes('verify a domain')
-
-        if (esErrorRestriccionDominio) {
-          console.warn('Resend en modo prueba: destinatario externo no permitido. Despachando verificación vía Supabase Auth.')
-          const supabaseAnon = createClient(supabaseUrl, anonKey)
-          const { error: supabaseResendErr } = await supabaseAnon.auth.resend({
-            type: 'signup',
-            email: datos.email,
-            options: {
-              emailRedirectTo: redirectTo,
-            },
-          })
-
-          if (supabaseResendErr) {
-            console.error('Error enviando correo vía Supabase Auth:', supabaseResendErr)
-            // Compensación estricta: eliminamos el usuario si no se pudo enviar el correo
-            await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
-            await supabaseAdmin.auth.admin.deleteUser(userId)
-            return jsonResponse(
-              {
-                error: `No se pudo enviar el correo de verificación a ${datos.email} (${supabaseResendErr.message}). La cuenta no fue creada para mantener la regla de verificación obligatoria.`,
-              },
-              502,
-            )
-          }
-
-          return jsonResponse(
-            {
-              usuario: perfil,
-              emailEnviado: true,
-              aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de confirmación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta.`,
-            },
-            200,
-          )
-        }
-
-        // Si es otro fallo grave e inesperado, aplicamos compensación
         await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
         await supabaseAdmin.auth.admin.deleteUser(userId)
         return jsonResponse(
           {
-            error: `No se pudo enviar el correo de confirmación (Resend: ${resendErr}). La cuenta no fue creada. Verifica las restricciones de dominio de Resend.`,
+            error: `No se pudo enviar el correo de confirmación (Resend: ${resendErr}). La cuenta no fue creada para mantener la regla de verificación obligatoria.`,
           },
           502,
         )
       }
     } catch (errResend) {
       console.error('Excepción al conectar con Resend:', errResend)
-      // Fallback a Supabase Auth
-      const supabaseAnon = createClient(supabaseUrl, anonKey)
-      const { error: supabaseResendErr } = await supabaseAnon.auth.resend({
-        type: 'signup',
-        email: datos.email,
-        options: {
-          emailRedirectTo: redirectTo,
-        },
-      })
-      if (supabaseResendErr) {
-        await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
-        await supabaseAdmin.auth.admin.deleteUser(userId)
-        return jsonResponse(
-          {
-            error: `Error al enviar correo de verificación: ${supabaseResendErr.message}`,
-          },
-          502,
-        )
-      }
-      return jsonResponse(
-        {
-          usuario: perfil,
-          emailEnviado: true,
-          aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de verificación a ${datos.email}. El usuario no podrá ingresar hasta que confirme su cuenta.`,
-        },
-        200,
-      )
-    }
-  } else {
-    // Si no hay Resend API Key configurada, enviamos confirmación vía Supabase Auth
-    const supabaseAnon = createClient(supabaseUrl, anonKey)
-    const { error: supabaseResendErr } = await supabaseAnon.auth.resend({
-      type: 'signup',
-      email: datos.email,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
-    })
-    if (supabaseResendErr) {
       await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
       await supabaseAdmin.auth.admin.deleteUser(userId)
       return jsonResponse(
         {
-          error: `Error al enviar correo de verificación vía Supabase: ${supabaseResendErr.message}`,
+          error: `Error de conexión al enviar el correo con Resend: ${errResend instanceof Error ? errResend.message : String(errResend)}`,
         },
         502,
       )
     }
-  }
 
-  return jsonResponse(
-    {
-      usuario: perfil,
-      emailEnviado: true,
-      aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió un correo electrónico con el enlace de confirmación a ${datos.email}. El usuario no podrá ingresar hasta confirmar su cuenta.`,
-    },
-    200,
-  )
+    return jsonResponse(
+      {
+        usuario: perfil,
+        emailEnviado: true,
+        aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de verificación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta.`,
+      },
+      200,
+    )
+  } else {
+    // 1B. FLUJO NATIVO DE SUPABASE AUTH (Garantiza entrega de correo, token válido y estado no verificado estricto)
+    // 1. Crear el usuario con la contraseña fijada por el administrador y email_confirm en false
+    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: datos.email,
+      password: datos.password,
+      email_confirm: false,
+      user_metadata: {
+        nombre_completo: datos.nombreCompleto,
+      },
+    })
+
+    if (createError || !createData?.user) {
+      const errorMsg =
+        createError?.message?.includes('already registered') ||
+        createError?.message?.includes('already been registered')
+          ? 'Ya existe un usuario registrado con este correo electrónico.'
+          : (createError?.message ?? 'No se pudo crear el usuario en el sistema de autenticación.')
+      return jsonResponse({ error: errorMsg }, 422)
+    }
+
+    userId = createData.user.id
+
+    // 2. Insertar fila en usuarios_perfil
+    const { data: perfil, error: perfilError } = await supabaseAdmin
+      .from('usuarios_perfil')
+      .insert({
+        id: userId,
+        nombre_completo: datos.nombreCompleto,
+        rol: datos.rol,
+        activo: true,
+      })
+      .select('id, nombre_completo, rol, activo, created_at, updated_at')
+      .single()
+
+    if (perfilError || !perfil) {
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+      return jsonResponse(
+        { error: perfilError?.message ?? 'No se pudo crear el perfil del usuario.' },
+        500,
+      )
+    }
+
+    // 3. Enviar invitación con el enlace de confirmación.
+    // Al enviarse después de creada la contraseña, el token de invitación se genera fresco
+    // y no es invalidado por modificaciones posteriores.
+    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      datos.email,
+      {
+        redirectTo,
+        data: {
+          nombre_completo: datos.nombreCompleto,
+        },
+      },
+    )
+
+    if (inviteError) {
+      console.error('Error enviando invitación por Supabase Auth:', inviteError)
+      await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
+      await supabaseAdmin.auth.admin.deleteUser(userId)
+      return jsonResponse(
+        {
+          error: `No se pudo enviar el correo de verificación a ${datos.email} (${inviteError.message}). La cuenta no fue creada.`,
+        },
+        502,
+      )
+    }
+
+    return jsonResponse(
+      {
+        usuario: perfil,
+        emailEnviado: true,
+        aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de confirmación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta mediante el enlace recibido.`,
+      },
+      200,
+    )
+  }
 })

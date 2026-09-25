@@ -90,92 +90,65 @@ Deno.serve(async (req: Request) => {
     // No bloqueante
   }
 
-  // 3. Enviar correo vía Resend
-  if (resendApiKey) {
-    const emailHtml = generarEmailRecuperacionHtml({
-      nombreCompleto,
-      email,
-      actionLink,
-      logoUrl: `${frontendUrl.replace(/\/+$/, '')}/logo.jpeg`,
-    })
+  const puedeUsarResend =
+    Boolean(resendApiKey) &&
+    (!resendFromEmail.includes('resend.dev') || email === 'eariassena19@gmail.com')
 
-    try {
-      const resendRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: resendFromEmail,
-          to: [email],
-          subject: '🔑 Restablece tu contraseña — Cipote Ceviche Cocteles',
-          html: emailHtml,
-        }),
-      })
-
-      if (!resendRes.ok) {
-        const resendErr = await resendRes.text()
-        console.error('Error enviando email con Resend:', resendErr)
-
-        const esErrorDominio =
-          resendRes.status === 403 ||
-          resendErr.toLowerCase().includes('testing emails') ||
-          resendErr.toLowerCase().includes('validation_error') ||
-          resendErr.toLowerCase().includes('verify a domain')
-
-        if (esErrorDominio) {
-          console.warn('Resend en modo prueba: despachando correo de recuperación vía Supabase Auth.')
-          const supabaseAnon = createClient(supabaseUrl, anonKey)
-          const { error: resetAuthError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
-            redirectTo,
-          })
-          if (resetAuthError) {
-            return jsonResponse(
-              { error: `No se pudo enviar el correo de recuperación a ${email}: ${resetAuthError.message}` },
-              502,
-            )
-          }
-          return jsonResponse(
-            { ok: true, mensaje: 'Enlace de recuperación enviado exitosamente a tu correo.' },
-            200,
-          )
-        }
-
-        return jsonResponse(
-          { error: `Error enviando correo de recuperación (${resendErr})` },
-          502,
-        )
-      }
-    } catch (err) {
-      console.error('Excepción al conectar con Resend:', err)
-      const supabaseAnon = createClient(supabaseUrl, anonKey)
-      const { error: resetAuthError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      })
-      if (resetAuthError) {
-        return jsonResponse(
-          { error: `Error enviando correo de recuperación: ${resetAuthError.message}` },
-          502,
-        )
-      }
-      return jsonResponse(
-        { ok: true, mensaje: 'Enlace de recuperación enviado exitosamente a tu correo.' },
-        200,
-      )
-    }
-  } else {
-    // Si no hay Resend API Key, enviamos vía Supabase Auth
+  if (!puedeUsarResend) {
+    // Despacho directo mediante Supabase Auth
     const supabaseAnon = createClient(supabaseUrl, anonKey)
     const { error: resetAuthError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
       redirectTo,
     })
     if (resetAuthError) {
       return jsonResponse(
-        { error: `Error enviando correo de recuperación vía Supabase: ${resetAuthError.message}` },
+        { error: `No se pudo enviar el correo de recuperación a ${email}: ${resetAuthError.message}` },
         502,
       )
     }
+    return jsonResponse(
+      { ok: true, mensaje: 'Enlace de recuperación enviado exitosamente a tu correo.' },
+      200,
+    )
+  }
+
+  // Si tiene Resend autorizado (dominio verificado o cuenta de prueba)
+  const emailHtml = generarEmailRecuperacionHtml({
+    nombreCompleto,
+    email,
+    actionLink,
+    logoUrl: `${frontendUrl.replace(/\/+$/, '')}/logo.jpeg`,
+  })
+
+  try {
+    const resendRes = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: resendFromEmail,
+        to: [email],
+        subject: '🔑 Restablece tu contraseña — Cipote Ceviche Cocteles',
+        html: emailHtml,
+      }),
+    })
+
+    if (!resendRes.ok) {
+      const resendErr = await resendRes.text()
+      console.error('Error enviando email con Resend:', resendErr)
+      return jsonResponse(
+        { error: `Error enviando correo de recuperación (${resendErr})` },
+        502,
+      )
+    }
+  } catch (err) {
+    console.error('Excepción al conectar con Resend:', err)
+    return jsonResponse(
+      { error: 'Error de conexión al enviar el correo de recuperación.' },
+      502,
+    )
   }
 
   return jsonResponse(
