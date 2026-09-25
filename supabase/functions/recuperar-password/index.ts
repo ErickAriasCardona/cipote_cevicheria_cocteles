@@ -116,6 +116,23 @@ Deno.serve(async (req: Request) => {
       if (!resendRes.ok) {
         const resendErr = await resendRes.text()
         console.error('Error enviando email con Resend:', resendErr)
+
+        const esErrorDominio =
+          resendRes.status === 403 ||
+          resendErr.toLowerCase().includes('testing emails') ||
+          resendErr.toLowerCase().includes('validation_error') ||
+          resendErr.toLowerCase().includes('verify a domain')
+
+        if (esErrorDominio) {
+          return jsonResponse(
+            {
+              error:
+                'El servicio de correos está en modo de prueba y solo permite envíos al propietario de la cuenta (eariassena19@gmail.com). Para restablecer tu contraseña, solicita ayuda al Administrador o verifica un dominio en resend.com.',
+            },
+            403,
+          )
+        }
+
         return jsonResponse(
           { error: `Error enviando correo de recuperación (${resendErr})` },
           502,

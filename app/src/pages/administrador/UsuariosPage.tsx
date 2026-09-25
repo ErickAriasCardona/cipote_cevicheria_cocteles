@@ -41,10 +41,14 @@ export function UsuariosPage() {
   async function handleCrear(input: CrearUsuarioInput) {
     setError(null)
     setMensajeExito(null)
-    await usuariosService.crearUsuario(input)
-    setMensajeExito(
-      `Usuario "${input.nombreCompleto}" creado exitosamente. Se envió un correo electrónico vía Resend a ${input.email} para que confirme su cuenta.`,
-    )
+    const res = await usuariosService.crearUsuario(input)
+    if (res.aviso) {
+      setMensajeExito(res.aviso)
+    } else {
+      setMensajeExito(
+        `Usuario "${input.nombreCompleto}" creado exitosamente. Se envió un correo electrónico a ${input.email} para que confirme su cuenta.`,
+      )
+    }
     await cargarUsuarios()
   }
 

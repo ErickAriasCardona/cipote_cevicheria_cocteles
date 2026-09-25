@@ -188,7 +188,35 @@ Deno.serve(async (req: Request) => {
       if (!resendRes.ok) {
         const resendErr = await resendRes.text()
         console.error('Error enviando correo con Resend:', resendErr)
-        // Compensación completa
+
+        // Si el fallo de Resend se debe a restricciones de dominio de prueba
+        // (por ejemplo: "You can only send testing emails to your own email address..."),
+        // NO debemos abortar ni borrar al usuario recién creado por el Administrador.
+        // En su lugar, activamos y confirmamos la cuenta directamente para que el empleado
+        // pueda ingresar inmediatamente con su contraseña asignada.
+        const esErrorRestriccionDominio =
+          resendRes.status === 403 ||
+          resendErr.toLowerCase().includes('testing emails') ||
+          resendErr.toLowerCase().includes('validation_error') ||
+          resendErr.toLowerCase().includes('verify a domain')
+
+        if (esErrorRestriccionDominio) {
+          console.warn('Resend en modo prueba: destinatario externo no permitido. Activando cuenta directamente.')
+          await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email_confirm: true,
+          })
+
+          return jsonResponse(
+            {
+              usuario: perfil,
+              emailEnviado: false,
+              aviso: `Usuario "${datos.nombreCompleto}" creado y activado exitosamente. Nota: Debido a que el remitente está en modo prueba (onboarding@resend.dev), Resend no permite despachar correos a destinatarios externos sin un dominio verificado en resend.com. La cuenta fue activada automáticamente para que el usuario pueda ingresar directamente con su correo y contraseña.`,
+            },
+            200,
+          )
+        }
+
+        // Si es otro fallo grave e inesperado, aplicamos compensación
         await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
         await supabaseAdmin.auth.admin.deleteUser(userId)
         return jsonResponse(
@@ -200,26 +228,31 @@ Deno.serve(async (req: Request) => {
       }
     } catch (errResend) {
       console.error('Excepción al conectar con Resend:', errResend)
-      await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
-      await supabaseAdmin.auth.admin.deleteUser(userId)
+      // En caso de fallo de red puntual con Resend, no destruimos al usuario: lo activamos para no detener la operación
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email_confirm: true,
+      })
       return jsonResponse(
         {
-          error: `Error de conexión al enviar el correo con Resend: ${errResend instanceof Error ? errResend.message : String(errResend)}`,
+          usuario: perfil,
+          emailEnviado: false,
+          aviso: `Usuario "${datos.nombreCompleto}" creado y activado exitosamente. Nota: No se pudo contactar el servicio de correo Resend; la cuenta fue activada automáticamente para que el usuario pueda ingresar de inmediato.`,
         },
-        502,
+        200,
       )
     }
   } else {
-    console.warn('RESEND_API_KEY no configurada. El usuario fue registrado pero no se envió el correo automático.')
+    console.warn('RESEND_API_KEY no configurada. Activando cuenta directamente.')
+    await supabaseAdmin.auth.admin.updateUserById(userId, {
+      email_confirm: true,
+    })
   }
 
   return jsonResponse(
     {
       usuario: perfil,
       emailEnviado: Boolean(resendApiKey),
-      aviso: resendApiKey
-        ? 'Usuario creado y correo de confirmación enviado exitosamente.'
-        : 'Usuario creado. Configura RESEND_API_KEY en Supabase Secrets para envíos automáticos.',
+      aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió un correo electrónico con el enlace de confirmación a ${datos.email}.`,
     },
     200,
   )

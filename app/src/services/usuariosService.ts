@@ -46,7 +46,7 @@ export const usuariosService = {
     return (data as UsuarioPerfilRow[]).map(mapRow)
   },
 
-  async crearUsuario(input: CrearUsuarioInput): Promise<UsuarioPerfil> {
+  async crearUsuario(input: CrearUsuarioInput): Promise<{ usuario: UsuarioPerfil; aviso?: string }> {
     const { data, error } = await supabase.functions.invoke('crear-usuario', {
       body: {
         nombre_completo: input.nombreCompleto,
@@ -68,7 +68,10 @@ export const usuariosService = {
       }
       throw error
     }
-    return mapRow(data.usuario as UsuarioPerfilRow)
+    return {
+      usuario: mapRow(data.usuario as UsuarioPerfilRow),
+      aviso: data.aviso,
+    }
   },
 
   async actualizarUsuario(id: string, cambios: ActualizarUsuarioInput): Promise<UsuarioPerfil> {
