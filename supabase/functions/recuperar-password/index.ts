@@ -65,7 +65,14 @@ Deno.serve(async (req: Request) => {
     )
   }
 
-  const actionLink = linkData.properties.action_link
+  let actionLink = linkData.properties.action_link
+  try {
+    const urlObj = new URL(actionLink)
+    urlObj.searchParams.set('redirect_to', redirectTo)
+    actionLink = urlObj.toString()
+  } catch {
+    // fallback
+  }
 
   // 2. Obtener nombre del perfil si existe
   let nombreCompleto: string | undefined

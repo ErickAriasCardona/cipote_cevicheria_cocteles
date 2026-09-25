@@ -88,13 +88,6 @@ export function generarEmailRecuperacionHtml({
                   </td>
                 </tr>
               </table>
-
-              <!-- Link Fallback -->
-              <p style="margin: 20px 0 0; font-size: 12px; color: #94A3B8; line-height: 1.5; word-break: break-all;">
-                Si el botón no abre directamente, copia y pega el siguiente enlace en tu navegador:<br>
-                <a href="${actionLink}" style="color: #41AFE0; font-size: 11.5px;">${actionLink}</a>
-              </p>
-
             </td>
           </tr>
 

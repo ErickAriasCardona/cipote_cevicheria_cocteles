@@ -129,7 +129,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const userId = linkData.user.id
-  const actionLink = linkData.properties?.action_link ?? redirectTo
+  let actionLink = linkData.properties?.action_link ?? redirectTo
+  try {
+    const urlObj = new URL(actionLink)
+    urlObj.searchParams.set('redirect_to', redirectTo)
+    actionLink = urlObj.toString()
+  } catch {
+    // fallback
+  }
 
   // 2. Insertar fila en usuarios_perfil
   const { data: perfil, error: perfilError } = await supabaseAdmin

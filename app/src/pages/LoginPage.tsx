@@ -44,9 +44,15 @@ export function LoginPage() {
     searchParams.get('confirmed') === 'true' ||
     location.hash.includes('type=signup')
 
-  // Detectar si el usuario llega mediante enlace de recuperación de contraseña
+  // Detectar si el usuario llega mediante enlace de recuperación de contraseña o error de OTP
   useEffect(() => {
-    if (
+    if (location.hash.includes('otp_expired') || location.hash.includes('error_code=otp_expired')) {
+      if (location.hash.includes('recovery')) {
+        setError('El enlace de restablecimiento ha expirado o ya fue utilizado. Por favor solicita uno nuevo.')
+      } else {
+        setMensajeExito('Tu correo electrónico ya ha sido procesado o verificado. Si tu cuenta está activa, ya puedes iniciar sesión.')
+      }
+    } else if (
       searchParams.get('recovery') === 'true' ||
       location.hash.includes('type=recovery')
     ) {
