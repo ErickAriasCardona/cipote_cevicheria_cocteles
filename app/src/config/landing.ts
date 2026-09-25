@@ -1,4 +1,4 @@
-export const WHATSAPP_NUMBER = '573145499206'
+export const WHATSAPP_NUMBER = '573112302233'
 
 export const SIZES = ['7oz', '9oz', '12oz', '16oz'] as const
 export type SizeOption = (typeof SIZES)[number]

@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { supabase } from '../lib/supabaseClient'
 import { GlassCard } from '../components/ui/GlassCard'
@@ -9,26 +9,81 @@ import { Button } from '../components/ui/Button'
 import { useTheme } from '../theme/useTheme'
 import { IconoLuna, IconoSol } from '../components/ui/IconoTema'
 
+type ModoLogin = 'login' | 'solicitar_recuperacion' | 'restablecer_password'
+
 /**
- * Formulario de inicio de sesión (BD-01.4).
+ * Formulario de inicio de sesión y recuperación de contraseña (BD-01.4).
  * Tras un login exitoso, resuelve el rol desde usuarios_perfil y redirige
  * a la ruta base de ese rol; AppRouter + guards se encargan del resto.
+ *
+ * Integra:
+ *  1. Verificación obligatoria de confirmación de correo.
+ *  2. Solicitud de restablecimiento de contraseña vía Resend / Supabase Auth.
+ *  3. Establecimiento de nueva contraseña con token de recuperación.
  */
 export function LoginPage() {
+  const [modo, setModo] = useState<ModoLogin>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  
+  // Estados para recuperación
+  const [recuperarEmail, setRecuperarEmail] = useState('')
+  const [nuevaPassword, setNuevaPassword] = useState('')
+  const [confirmarPassword, setConfirmarPassword] = useState('')
+  
   const [error, setError] = useState<string | null>(null)
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
   const { theme, toggleTheme } = useTheme()
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const correoConfirmado =
+    searchParams.get('confirmed') === 'true' ||
+    location.hash.includes('type=signup')
+
+  // Detectar si el usuario llega mediante enlace de recuperación de contraseña
+  useEffect(() => {
+    if (
+      searchParams.get('recovery') === 'true' ||
+      location.hash.includes('type=recovery')
+    ) {
+      setModo('restablecer_password')
+      setError(null)
+      setMensajeExito(null)
+    }
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setModo('restablecer_password')
+        setError(null)
+        setMensajeExito(null)
+      }
+    })
+
+    return () => {
+      authSub.subscription.unsubscribe()
+    }
+  }, [location, searchParams])
+
+  async function handleLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+    setMensajeExito(null)
     setEnviando(true)
     try {
       const { user } = await authService.iniciarSesion(email, password)
       if (!user) throw new Error('No se pudo iniciar sesión.')
+
+      // Verificación estricta: Correo electrónico confirmado
+      if (!user.email_confirmed_at) {
+        await authService.cerrarSesion()
+        throw new Error(
+          'Tu correo electrónico aún no ha sido confirmado. Revisa el enlace de activación enviado a tu bandeja de entrada o spam antes de ingresar.',
+        )
+      }
 
       const { data: perfil, error: perfilError } = await supabase
         .from('usuarios_perfil')
@@ -44,7 +99,68 @@ export function LoginPage() {
 
       navigate(perfil.rol === 'administrador' ? '/administrador' : '/cajero', { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión.')
+      let mensaje = err instanceof Error ? err.message : 'Error al iniciar sesión.'
+      const lower = mensaje.toLowerCase()
+      if (lower.includes('email not confirmed') || lower.includes('correo no confirmado')) {
+        mensaje =
+          'Tu correo electrónico aún no ha sido confirmado. Por favor revisa el email de activación enviado a tu bandeja de entrada o spam antes de ingresar.'
+      } else if (lower.includes('invalid login credentials') || lower.includes('invalid_grant')) {
+        mensaje = 'Correo electrónico o contraseña incorrectos. Verifica tus credenciales.'
+      }
+      setError(mensaje)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  async function handleSolicitarRecuperacion(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setMensajeExito(null)
+    setEnviando(true)
+
+    try {
+      const targetEmail = recuperarEmail.trim().toLowerCase()
+      if (!targetEmail || !targetEmail.includes('@')) {
+        throw new Error('Por favor ingresa un correo electrónico válido.')
+      }
+
+      await authService.solicitarRecuperacion(targetEmail)
+      setMensajeExito(
+        '¡Enlace enviado! Hemos enviado las instrucciones para restablecer tu contraseña. Por favor revisa tu bandeja de entrada o spam.',
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo enviar el correo de recuperación.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  async function handleRestablecerPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError(null)
+    setMensajeExito(null)
+
+    if (nuevaPassword.length < 6) {
+      setError('La nueva contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+
+    if (nuevaPassword !== confirmarPassword) {
+      setError('Las contraseñas no coinciden. Por favor verifica ambos campos.')
+      return
+    }
+
+    setEnviando(true)
+    try {
+      await authService.actualizarContrasena(nuevaPassword)
+      setMensajeExito('¡Contraseña actualizada con éxito! Ya puedes iniciar sesión con tu nueva clave.')
+      setModo('login')
+      setPassword('')
+      setNuevaPassword('')
+      setConfirmarPassword('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la contraseña.')
     } finally {
       setEnviando(false)
     }
@@ -175,130 +291,278 @@ export function LoginPage() {
         >
           Cipote Ceviche Cocteles
         </div>
+
+        {/* Título dinámico según el modo */}
         <h1
           style={{
-            margin: '0 0 24px',
-            fontSize: 24,
+            margin: '0 0 20px',
+            fontSize: 23,
             fontWeight: 800,
             letterSpacing: '-0.3px',
             color: 'var(--text-primary)',
           }}
         >
-          Iniciar sesión
+          {modo === 'login' && 'Iniciar sesión'}
+          {modo === 'solicitar_recuperacion' && 'Recuperar contraseña'}
+          {modo === 'restablecer_password' && 'Restablecer contraseña'}
         </h1>
 
-        <form onSubmit={handleSubmit} style={{ textAlign: 'left' }}>
-          <Input
-            id="email"
-            type="email"
-            label="Correo"
-            placeholder="correo@cipote.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
-
-          <Input
-            id="password"
-            type="password"
-            label="Contraseña"
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
-
-          {error && (
-            <p
-              role="alert"
-              style={{
-                margin: '10px 0 16px',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--red-text)',
-              }}
-            >
-              {error}
-            </p>
-          )}
-
-          <Button
-            type="submit"
-            variant="primary"
-            fullWidth
-            size="lg"
-            disabled={enviando}
-            style={{ marginTop: 12 }}
-          >
-            {enviando ? 'Ingresando…' : 'Ingresar'}
-          </Button>
-
+        {/* Banner de correo verificado */}
+        {correoConfirmado && modo === 'login' && (
           <div
+            role="status"
             style={{
-              marginTop: 20,
-              paddingTop: 16,
-              borderTop: '1px solid var(--hr-line)',
-              textAlign: 'center',
+              margin: '0 0 20px',
+              padding: '14px 16px',
+              borderRadius: 12,
+              background: 'rgba(46, 158, 91, 0.12)',
+              border: '1px solid rgba(46, 158, 91, 0.35)',
+              color: 'var(--green-text, #2e9e5b)',
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              textAlign: 'left',
+              lineHeight: 1.4,
             }}
           >
-            <span
-              style={{
-                fontSize: 11.5,
-                color: 'var(--text-faint)',
-                display: 'block',
-                marginBottom: 8,
-              }}
-            >
-              Credenciales de prueba rápida:
-            </span>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin.prueba@cipote.test')
-                  setPassword('Cipote-Admin-2026!')
-                }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(65, 175, 224, 0.3)',
-                  background: 'rgba(65, 175, 224, 0.1)',
-                  color: 'var(--brand-blue)',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                Admin (demo)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('cajero.prueba@cipote.test')
-                  setPassword('Cipote-Cajero-2026!')
-                }}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: 999,
-                  border: '1px solid rgba(46, 158, 91, 0.3)',
-                  background: 'rgba(46, 158, 91, 0.1)',
-                  color: 'var(--green-text)',
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                Cajero (demo)
-              </button>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>✅</span>
+            <div>
+              <strong style={{ display: 'block', marginBottom: 2 }}>¡Correo verificado con éxito!</strong>
+              Tu cuenta ha sido activada correctamente. Ingresa tu correo y contraseña para acceder.
             </div>
           </div>
-        </form>
+        )}
+
+        {/* Mensaje de éxito dinámico */}
+        {mensajeExito && (
+          <div
+            role="status"
+            style={{
+              margin: '0 0 20px',
+              padding: '14px 16px',
+              borderRadius: 12,
+              background: 'rgba(46, 158, 91, 0.12)',
+              border: '1px solid rgba(46, 158, 91, 0.35)',
+              color: 'var(--green-text, #2e9e5b)',
+              fontSize: 13,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              textAlign: 'left',
+              lineHeight: 1.4,
+            }}
+          >
+            <span style={{ fontSize: 20, flexShrink: 0 }}>✨</span>
+            <div>{mensajeExito}</div>
+          </div>
+        )}
+
+        {/* Mensaje de error general */}
+        {error && (
+          <p
+            role="alert"
+            style={{
+              margin: '0 0 16px',
+              padding: '10px 14px',
+              borderRadius: 8,
+              background: 'rgba(228, 41, 38, 0.08)',
+              border: '1px solid rgba(228, 41, 38, 0.25)',
+              fontSize: 13,
+              fontWeight: 600,
+              color: 'var(--red-text, #E42926)',
+              textAlign: 'left',
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        {/* MODO 1: INICIO DE SESIÓN */}
+        {modo === 'login' && (
+          <form onSubmit={handleLoginSubmit} style={{ textAlign: 'left' }}>
+            <Input
+              id="email"
+              type="email"
+              label="Correo"
+              placeholder="correo@cipote.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+
+            <Input
+              id="password"
+              type="password"
+              label="Contraseña"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+            />
+
+            <div style={{ textAlign: 'right', marginTop: -6, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null)
+                  setMensajeExito(null)
+                  setRecuperarEmail(email)
+                  setModo('solicitar_recuperacion')
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  color: 'var(--brand-blue, #41AFE0)',
+                  fontSize: 12.5,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 3,
+                }}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              size="lg"
+              disabled={enviando}
+              style={{ marginTop: 4 }}
+            >
+              {enviando ? 'Ingresando…' : 'Ingresar'}
+            </Button>
+          </form>
+        )}
+
+        {/* MODO 2: SOLICITAR RECUPERACIÓN */}
+        {modo === 'solicitar_recuperacion' && (
+          <form onSubmit={handleSolicitarRecuperacion} style={{ textAlign: 'left' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Ingresa el correo electrónico asociado a tu cuenta y te enviaremos un enlace seguro para restablecer tu contraseña.
+            </p>
+
+            <Input
+              id="recuperarEmail"
+              type="email"
+              label="Correo electrónico"
+              placeholder="tu-correo@cipote.com"
+              value={recuperarEmail}
+              onChange={(e) => setRecuperarEmail(e.target.value)}
+              required
+              autoComplete="email"
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              size="lg"
+              disabled={enviando}
+              style={{ marginTop: 14 }}
+            >
+              {enviando ? 'Enviando enlace…' : 'Enviar enlace de recuperación'}
+            </Button>
+
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null)
+                  setMensajeExito(null)
+                  setModo('login')
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                ← Volver al inicio de sesión
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* MODO 3: RESTABLECER CONTRASEÑA */}
+        {modo === 'restablecer_password' && (
+          <form onSubmit={handleRestablecerPassword} style={{ textAlign: 'left' }}>
+            <p style={{ margin: '0 0 16px', fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              Crea tu nueva contraseña. Debe tener al menos 6 caracteres.
+            </p>
+
+            <Input
+              id="nuevaPassword"
+              type="password"
+              label="Nueva contraseña"
+              placeholder="Mínimo 6 caracteres"
+              value={nuevaPassword}
+              onChange={(e) => setNuevaPassword(e.target.value)}
+              required
+              minLength={6}
+              autoComplete="new-password"
+            />
+
+            <Input
+              id="confirmarPassword"
+              type="password"
+              label="Confirmar nueva contraseña"
+              placeholder="Repite la contraseña"
+              value={confirmarPassword}
+              onChange={(e) => setConfirmarPassword(e.target.value)}
+              required
+              minLength={6}
+              autoComplete="new-password"
+            />
+
+            <Button
+              type="submit"
+              variant="primary"
+              fullWidth
+              size="lg"
+              disabled={enviando}
+              style={{ marginTop: 14 }}
+            >
+              {enviando ? 'Guardando…' : 'Guardar nueva contraseña'}
+            </Button>
+
+            <div style={{ marginTop: 20, textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setError(null)
+                  setMensajeExito(null)
+                  setModo('login')
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                ← Cancelar y volver al login
+              </button>
+            </div>
+          </form>
+        )}
       </GlassCard>
     </div>
   )
 }
-

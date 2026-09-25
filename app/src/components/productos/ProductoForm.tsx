@@ -77,15 +77,14 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
   const { confirmar } = useConfirmacion()
 
   const combosCategoria = useMemo(
-    () => (categoria === 'otro' ? [] : combosUnidadPorCategoria(insumos, categoria)),
+    () => (categoria === 'otro' || categoria === 'adicionales' ? [] : combosUnidadPorCategoria(insumos, categoria)),
     [insumos, categoria],
   )
 
   // Categorías cuyo "Nombre del producto" se elige de insumos existentes en
   // vez de escribirse libremente: Bebidas (insumos.categoriaProducto ===
-  // 'bebida') y Otros (insumos.categoriaProducto == null, es decir insumos
-  // que no son de tipo ceviche/granizado/bebida -- ej. Bolsa, Tapa, Fruta).
-  const usaSelectorNombreDesdeInsumos = categoria === 'bebida' || categoria === 'otro'
+  // 'bebida'), Adicionales y Otros (insumos.categoriaProducto == null).
+  const usaSelectorNombreDesdeInsumos = categoria === 'bebida' || categoria === 'otro' || categoria === 'adicionales'
 
   const opcionesNombreCatalogo = useMemo(() => {
     if (!usaSelectorNombreDesdeInsumos) return []
@@ -100,7 +99,12 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
       ...nombresInsumos.map((n) => ({ value: n, label: n })),
       {
         value: CLAVE_NOMBRE_LIBRE,
-        label: categoria === 'bebida' ? '+ Agregar bebida nueva (sin stock)...' : '+ Agregar nombre nuevo (sin stock)...',
+        label:
+          categoria === 'bebida'
+            ? '+ Agregar bebida nueva (sin stock)...'
+            : categoria === 'adicionales'
+            ? '+ Agregar adicional nuevo (sin stock)...'
+            : '+ Agregar nombre nuevo (sin stock)...',
       },
     ]
   }, [insumos, categoria, usaSelectorNombreDesdeInsumos])
@@ -171,7 +175,7 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
     setPrecioBorrador('')
     setComboSeleccionado('')
     setNombreCatalogoSeleccion(CLAVE_NOMBRE_LIBRE)
-    if (nuevaCategoria === 'bebida' || nuevaCategoria === 'otro') setNombre('')
+    if (nuevaCategoria === 'bebida' || nuevaCategoria === 'otro' || nuevaCategoria === 'adicionales') setNombre('')
     setError(null)
   }
 
@@ -208,15 +212,16 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
       return
     }
 
-    if (categoria === 'otro') {
+    if (categoria === 'otro' || categoria === 'adicionales') {
       if (!Number.isFinite(precioDirectoNumerico) || precioDirectoNumerico <= 0) {
         setError('Ingresa un precio de venta válido mayor que cero para este producto.')
         return
       }
 
+      const nombreCategoria = categoria === 'adicionales' ? 'Adicionales' : 'Otros'
       const ok = await confirmar({
         titulo: 'Crear producto',
-        mensaje: `¿Confirmas crear el producto "${nombreFinal}" en categoría "Otros" con precio ${formatearCOP(precioDirectoNumerico)}?`,
+        mensaje: `¿Confirmas crear el producto "${nombreFinal}" en categoría "${nombreCategoria}" con precio ${formatearCOP(precioDirectoNumerico)}?`,
         textoConfirmar: 'Crear producto',
       })
       if (!ok) return
@@ -286,7 +291,7 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
     enviando ||
     !nombreFinal ||
     Boolean(productoDuplicado) ||
-    (categoria === 'otro'
+    (categoria === 'otro' || categoria === 'adicionales'
       ? !precioDirecto || precioDirectoNumerico <= 0
       : tamanos.length === 0)
 
@@ -338,6 +343,12 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                   Bebidas (ml)
                 </Chip>
                 <Chip
+                  active={categoria === 'adicionales'}
+                  onClick={() => handleCambiarCategoria('adicionales')}
+                >
+                  Adicionales (precio directo)
+                </Chip>
+                <Chip
                   active={categoria === 'otro'}
                   onClick={() => handleCambiarCategoria('otro')}
                 >
@@ -346,16 +357,17 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
               </div>
             </div>
 
-            {/* Nombre del producto -- para Bebidas y Otros, selector de
-            insumos existentes de la categoría correspondiente + opción
-            explícita de nombre nuevo sin stock (ticket post-MVP parte 3,
-            Opción A confirmada por Erick: el nombre nuevo se guarda solo
-            como texto en productos.nombre, sin crear insumo ni llevar
-            control de inventario; misma mecánica para ambas categorías). */}
+            {/* Nombre del producto -- para Bebidas, Adicionales y Otros */}
             {usaSelectorNombreDesdeInsumos ? (
               <>
                 <Select
-                  label={categoria === 'bebida' ? 'Nombre del producto (bebida)' : 'Nombre del producto (otros)'}
+                  label={
+                    categoria === 'bebida'
+                      ? 'Nombre del producto (bebida)'
+                      : categoria === 'adicionales'
+                      ? 'Nombre del adicional'
+                      : 'Nombre del producto (otros)'
+                  }
                   id="nombre_catalogo_select"
                   value={nombreCatalogoSeleccion}
                   onChange={(e) => {
@@ -369,12 +381,20 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                     label={
                       categoria === 'bebida'
                         ? 'Nombre de la bebida nueva (sin stock/insumo)'
+                        : categoria === 'adicionales'
+                        ? 'Nombre del adicional nuevo (sin stock)'
                         : 'Nombre del producto nuevo (sin stock/insumo)'
                     }
                     id="nombre_catalogo_nuevo"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    placeholder={categoria === 'bebida' ? 'Ej: Limonada de Coco' : 'Ej: Empanada de Carne'}
+                    placeholder={
+                      categoria === 'bebida'
+                        ? 'Ej: Limonada de Coco'
+                        : categoria === 'adicionales'
+                        ? 'Ej: Porción de Aguacate, Salsa Especial...'
+                        : 'Ej: Empanada de Carne'
+                    }
                     required
                   />
                 )}
@@ -432,7 +452,7 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
               gap: 12,
             }}
           >
-            {categoria === 'otro' ? (
+            {categoria === 'otro' || categoria === 'adicionales' ? (
               <>
                 <div>
                   <span
@@ -447,7 +467,9 @@ export function ProductoForm({ insumos, productos, precios, tamanosVaso, onCrear
                     Precio de Venta Directo
                   </span>
                   <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-                    Los productos en categoría "Otros" no usan vasos ni mililitros, se venden por unidad con este precio fijo.
+                    {categoria === 'adicionales'
+                      ? 'Los adicionales se venden con precio fijo por porción/unidad y no descuentan stock de vasos.'
+                      : 'Los productos en categoría "Otros" no usan vasos ni mililitros, se venden por unidad con este precio fijo.'}
                   </p>
                 </div>
 

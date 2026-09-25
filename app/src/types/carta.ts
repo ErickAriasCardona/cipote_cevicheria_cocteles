@@ -34,6 +34,7 @@ export interface DatosCarta {
   granizados: ProductoCarta[]
   bebidas: ProductoCarta[]
   otros: ProductoCarta[]
+  adicionales: ProductoCarta[]
   promociones: PromocionCarta[]
   todos: ProductoCarta[]
 }

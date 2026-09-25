@@ -90,7 +90,7 @@ export function obtenerCombosDisponibles(
   tamanosVaso: TamanoVaso[],
   insumos: Insumo[],
 ): ComboUnidad[] {
-  if (producto.categoria === 'otro') return []
+  if (producto.categoria === 'otro' || producto.categoria === 'adicionales') return []
   const filasProducto = precios.filter((p) => p.productoId === producto.id)
   const combos = combosUnidadPorCategoria(insumos, producto.categoria)
   return combos.filter((combo) => {

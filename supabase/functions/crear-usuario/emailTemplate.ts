@@ -1,0 +1,166 @@
+interface GenerarEmailConfirmacionParams {
+  nombreCompleto: string
+  email: string
+  password?: string
+  rol: 'administrador' | 'cajero'
+  actionLink: string
+  logoUrl?: string
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+export function generarEmailConfirmacionHtml({
+  nombreCompleto,
+  email,
+  password,
+  rol,
+  actionLink,
+  logoUrl = 'https://cipote-ceviche-cocteles.vercel.app/logo.jpeg',
+}: GenerarEmailConfirmacionParams): string {
+  const rolFormateado = rol === 'administrador' ? 'Administrador' : 'Cajero / Mostrador'
+  const rolColor = rol === 'administrador' ? '#002D50' : '#E42926'
+  const rolBg = rol === 'administrador' ? '#EBF5FB' : '#FDEDEC'
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirma tu cuenta — Cipote Ceviche Cocteles</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #F8FAFC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1E293B; }
+    table { border-collapse: collapse; }
+    a { color: #41AFE0; text-decoration: none; }
+    .btn-confirmar:hover { background-color: #C81E1E !important; }
+  </style>
+</head>
+<body style="margin: 0; padding: 30px 10px; background-color: #F1F5F9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" width="100%" style="max-width: 580px; background-color: #FFFFFF; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 30px rgba(0, 45, 80, 0.08); border: 1px solid #E2E8F0;" border="0" cellspacing="0" cellpadding="0">
+          
+          <!-- Header Navy Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #071524 0%, #002D50 60%, #1a4f78 100%); padding: 36px 30px 32px; text-align: center;">
+              <!-- Logo Brand -->
+              <table role="presentation" align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 14px;">
+                <tr>
+                  <td style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #E42926, #41AFE0); padding: 3px; box-shadow: 0 8px 20px rgba(0,0,0,0.3);">
+                    <img src="${logoUrl}" alt="Cipote Logo" width="66" height="66" style="border-radius: 50%; display: block; object-fit: cover; border: 2px solid #ffffff; background: #fff;" />
+                  </td>
+                </tr>
+              </table>
+              <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
+                Cipote Ceviche Cocteles
+              </h1>
+              <p style="margin: 6px 0 0; color: #93C5FD; font-size: 13px; font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">
+                Sistema de Gestión &amp; Punto de Venta
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 36px 34px 30px;">
+              
+              <!-- Role Badge -->
+              <table role="presentation" border="0" cellspacing="0" cellpadding="0" style="margin-bottom: 18px;">
+                <tr>
+                  <td style="background-color: ${rolBg}; color: ${rolColor}; font-size: 12px; font-weight: 800; padding: 5px 14px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.6px; border: none;">
+                    Rol: ${rolFormateado}
+                  </td>
+                </tr>
+              </table>
+
+              <h2 style="margin: 0 0 12px; color: #002D50; font-size: 21px; font-weight: 800; line-height: 1.3;">
+                ¡Hola, ${nombreCompleto}! 👋
+              </h2>
+
+              <p style="margin: 0 0 18px; font-size: 14.5px; line-height: 1.6; color: #475569;">
+                Tu cuenta ha sido creada exitosamente por el administrador en la plataforma oficial de <strong>Cipote Ceviche Cocteles</strong>.
+              </p>
+
+              <p style="margin: 0 0 24px; font-size: 14.5px; line-height: 1.6; color: #475569;">
+                Por motivos de seguridad, para poder ingresar con tu contraseña debes <strong>confirmar tu correo electrónico</strong> haciendo clic en el siguiente botón:
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 28px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${actionLink}" target="_blank" class="btn-confirmar" style="display: inline-block; background: linear-gradient(135deg, #E42926, #C81E1E); color: #FFFFFF; font-size: 15px; font-weight: 800; padding: 14px 34px; border-radius: 12px; text-decoration: none; box-shadow: 0 6px 18px rgba(228, 41, 38, 0.35); letter-spacing: 0.2px;">
+                       Confirmar correo y activar cuenta →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Credenciales Info Box -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; margin: 24px 0 20px;">
+                <tr>
+                  <td style="padding: 18px 20px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #002D50; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                      📋 Tus datos de acceso:
+                    </div>
+                    <div style="font-size: 13.5px; color: #334155; margin-bottom: 7px;">
+                      <strong>Usuario / Correo:</strong> <span style="font-family: monospace; color: #0284C7; font-weight: 600;">${email}</span>
+                    </div>
+                    <div style="font-size: 13.5px; color: #334155;">
+                      <strong>Contraseña:</strong> <span style="font-family: monospace; color: #0F172A; font-weight: 700; background-color: #E2E8F0; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.5px;">${password ? escapeHtml(password) : 'La contraseña asignada por tu administrador'}</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Warning Callout -->
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #FFFBEB; border-left: 4px solid #F59E0B; border-radius: 0 10px 10px 0; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 12.5px; color: #92400E; line-height: 1.5;">
+                    ⚠️ <strong>Importante:</strong> No podrás acceder al sistema hasta que confirmes este correo. Si no realizas la confirmación, el acceso permanecerá bloqueado.
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Link Fallback -->
+              <p style="margin: 20px 0 0; font-size: 12px; color: #94A3B8; line-height: 1.5; word-break: break-all;">
+                Si el botón no abre directamente, copia y pega el siguiente enlace en la barra de direcciones de tu navegador:<br>
+                <a href="${actionLink}" style="color: #41AFE0; font-size: 11.5px;">${actionLink}</a>
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- Footer Section -->
+          <tr>
+            <td style="background-color: #07131F; padding: 24px 30px; text-align: center; border-top: 1px solid #1E293B;">
+              <p style="margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #FFFFFF;">
+                Cipote Ceviche Cocteles
+              </p>
+              <p style="margin: 0 0 4px; font-size: 12px; color: #94A3B8;">
+                📍 Avenida Guabinal No. 51-53, Mercacentro N°4 · Ibagué, Tolima
+              </p>
+              <p style="margin: 0 0 12px; font-size: 12px; color: #94A3B8;">
+                📞 Contacto: <strong>311 230 2233</strong> · De domingo a domingo: 1:30 PM – 8:30 PM
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #475569;">
+                Este es un mensaje automático de seguridad. Por favor no respondas a este correo.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}

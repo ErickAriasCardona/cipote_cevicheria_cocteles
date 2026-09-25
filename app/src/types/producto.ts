@@ -8,7 +8,7 @@
  * física se renombró a `precio_legado` (migración
  * `20260905000001_producto_tamano_precio.sql`).
  */
-export type CategoriaProducto = 'ceviche' | 'granizado' | 'bebida' | 'otro'
+export type CategoriaProducto = 'ceviche' | 'granizado' | 'bebida' | 'otro' | 'adicionales'
 
 export interface Producto {
   id: string

@@ -105,7 +105,7 @@ interface TurnoRow {
 interface ProductoRow {
   id: string
   activo: boolean
-  categoria: 'ceviche' | 'granizado' | 'bebida' | 'otro'
+  categoria: 'ceviche' | 'granizado' | 'bebida' | 'otro' | 'adicionales' | 'adicional'
   precio: string | null
 }
 interface TamanoVasoRow {
@@ -153,7 +153,7 @@ interface ProductoComponenteRow {
   id: string
   nombre: string
   activo: boolean
-  categoria: 'ceviche' | 'granizado' | 'bebida' | 'otro'
+  categoria: 'ceviche' | 'granizado' | 'bebida' | 'otro' | 'adicionales' | 'adicional'
 }
 interface VentaRow {
   id: string
@@ -443,7 +443,7 @@ Deno.serve(async (req: Request) => {
 
           let insumoVasoId: string | null = null
 
-          if (producto.categoria === 'otro') {
+          if (producto.categoria === 'otro' || producto.categoria === 'adicionales' || (producto.categoria as string) === 'adicional') {
             if (item.precio && item.precio > 0) {
               precioUnitario = item.precio
             } else if (producto.precio && num(producto.precio) > 0) {
@@ -538,7 +538,12 @@ Deno.serve(async (req: Request) => {
             }
             const cantidadTotalComponente = componente.cantidad * item.cantidad
 
-            if (prodComponente.categoria !== 'otro' && componente.tamano_vaso_id) {
+            if (
+              prodComponente.categoria !== 'otro' &&
+              prodComponente.categoria !== 'adicionales' &&
+              (prodComponente.categoria as string) !== 'adicional' &&
+              componente.tamano_vaso_id
+            ) {
               const tamanoComponenteResult = await transaction.queryObject<TamanoVasoRow>(
                 `select id, activo, insumo_id from public.tamanos_vaso where id = $1`,
                 [componente.tamano_vaso_id],

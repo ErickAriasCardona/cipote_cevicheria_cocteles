@@ -41,7 +41,7 @@ interface VentaFormProps {
   onRegistrar: (input: RegistrarVentaInput) => Promise<void>
 }
 
-type CategoriaFiltro = 'todas' | 'ceviche' | 'granizado' | 'bebida' | 'otro' | 'combos'
+type CategoriaFiltro = 'todas' | 'ceviche' | 'granizado' | 'bebida' | 'adicionales' | 'otro' | 'combos'
 type ModoDomicilio = 'sin_domicilio' | 'pagado_en_caja' | 'contra_entrega'
 
 interface ReciboFacturaConfirmacionProps {
@@ -435,7 +435,7 @@ export function VentaForm({
     () => productos.find((p) => p.id === productoId),
     [productos, productoId],
   )
-  const esOtro = productoObj?.categoria === 'otro'
+  const esOtro = productoObj?.categoria === 'otro' || productoObj?.categoria === 'adicionales'
 
   // Tamaños configurados para el producto seleccionado
   const tamanosConfigurados = useMemo(() => {
@@ -487,7 +487,11 @@ export function VentaForm({
     }
 
     const tamanoObj = tamanosVaso.find((t) => t.id === tamanoVasoId)
-    const tamanoEtiqueta = esOtro ? 'Unidad' : (tamanoObj?.etiqueta ?? 'Estándar')
+    const tamanoEtiqueta = esOtro
+      ? productoObj.categoria === 'adicionales'
+        ? 'Adicional'
+        : 'Unidad'
+      : (tamanoObj?.etiqueta ?? 'Estándar')
 
     setTicketItems((prev) => {
       const indexExistente = prev.findIndex(
@@ -1083,6 +1087,12 @@ Esta acción descuenta insumos y no se puede deshacer desde caja.`
                   Bebidas
                 </Chip>
                 <Chip
+                  active={categoriaFiltro === 'adicionales'}
+                  onClick={() => setCategoriaFiltro('adicionales')}
+                >
+                  Adicionales
+                </Chip>
+                <Chip
                   active={categoriaFiltro === 'otro'}
                   onClick={() => setCategoriaFiltro('otro')}
                 >
@@ -1171,7 +1181,7 @@ Esta acción descuenta insumos y no se puede deshacer desde caja.`
                     }}
                   >
                     <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                      Producto Individual
+                      {productoObj?.categoria === 'adicionales' ? 'Adicional / Porción' : 'Producto Individual'}
                     </span>
                     <span style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--brand-green)' }}>
                       {formatearCOP(productoObj?.precio ?? 0)} c/u

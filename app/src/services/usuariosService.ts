@@ -55,7 +55,19 @@ export const usuariosService = {
         rol: input.rol,
       },
     })
-    if (error) throw error
+    if (error) {
+      if ('context' in error && error.context) {
+        try {
+          const body = await (error.context as Response).json()
+          if (body?.error) throw new Error(body.error)
+        } catch (jsonErr) {
+          if (jsonErr instanceof Error && jsonErr.message !== error.message) {
+            throw jsonErr
+          }
+        }
+      }
+      throw error
+    }
     return mapRow(data.usuario as UsuarioPerfilRow)
   },
 

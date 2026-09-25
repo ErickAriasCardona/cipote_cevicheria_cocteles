@@ -87,6 +87,7 @@ export function CartaPage() {
       ceviche: activos.filter((p) => p.categoria === 'ceviche').length,
       granizado: activos.filter((p) => p.categoria === 'granizado').length,
       bebida: activos.filter((p) => p.categoria === 'bebida').length,
+      adicionales: activos.filter((p) => p.categoria === 'adicionales').length,
       otro: activos.filter((p) => p.categoria === 'otro').length,
     }
   }, [productos])
@@ -308,6 +309,7 @@ export function CartaPage() {
                     { key: 'ceviche', label: 'Ceviches', count: conteos.ceviche },
                     { key: 'granizado', label: 'Granizados', count: conteos.granizado },
                     { key: 'bebida', label: 'Bebidas', count: conteos.bebida },
+                    { key: 'adicionales', label: 'Adicionales', count: conteos.adicionales },
                     { key: 'otro', label: 'Otros', count: conteos.otro },
                   ].map((tab) => {
                     const active = categoriaFiltro === tab.key

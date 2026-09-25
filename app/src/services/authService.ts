@@ -22,4 +22,33 @@ export const authService = {
     if (error) throw error
     return data.session
   },
+
+  async solicitarRecuperacion(email: string) {
+    try {
+      const { data, error } = await supabase.functions.invoke('recuperar-password', {
+        body: { email },
+      })
+      if (!error && data?.ok) {
+        return { ok: true, mensaje: data.mensaje ?? 'Correo de recuperación enviado.' }
+      }
+    } catch {
+      // Fallback a resetPasswordForEmail
+    }
+
+    const frontendUrl = window.location.origin
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${frontendUrl}/login?recovery=true`,
+    })
+    if (error) throw error
+    return { ok: true, data }
+  },
+
+  async actualizarContrasena(nuevaContrasena: string) {
+    const { data, error } = await supabase.auth.updateUser({
+      password: nuevaContrasena,
+    })
+    if (error) throw error
+    return data
+  },
 }
+

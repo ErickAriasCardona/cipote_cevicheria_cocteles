@@ -179,10 +179,20 @@ export function CartaSlideDrawer({ abierto, onCerrar, datos, cargando }: CartaSl
                 productos={datos?.bebidas ?? []}
               />
 
-              {/* 4. Otros productos si existen */}
+              {/* 4. Adicionales si existen */}
+              {datos?.adicionales && datos.adicionales.length > 0 && (
+                <CartaCarouselRow
+                  titulo="Adicionales"
+                  icono={<IconoDestello size={22} />}
+                  subtitulo="Porciones extras y complementos frescos para acompañar tu pedido."
+                  productos={datos.adicionales}
+                />
+              )}
+
+              {/* 5. Otros productos si existen */}
               {datos?.otros && datos.otros.length > 0 && (
                 <CartaCarouselRow
-                  titulo="Otros y Adicionales"
+                  titulo="Otros"
                   icono={<IconoDestello size={22} />}
                   subtitulo="Complementos especiales del menú."
                   productos={datos.otros}

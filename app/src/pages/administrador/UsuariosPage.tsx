@@ -18,6 +18,7 @@ export function UsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioPerfil[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null)
   const [mostrarCrearUsuario, setMostrarCrearUsuario] = useState(false)
 
   const cargarUsuarios = useCallback(async () => {
@@ -38,7 +39,12 @@ export function UsuariosPage() {
   }, [cargarUsuarios])
 
   async function handleCrear(input: CrearUsuarioInput) {
+    setError(null)
+    setMensajeExito(null)
     await usuariosService.crearUsuario(input)
+    setMensajeExito(
+      `Usuario "${input.nombreCompleto}" creado exitosamente. Se envió un correo electrónico vía Resend a ${input.email} para que confirme su cuenta.`,
+    )
     await cargarUsuarios()
   }
 
@@ -88,6 +94,30 @@ export function UsuariosPage() {
             <p role="alert" style={{ margin: 0, color: 'var(--brand-red)', fontSize: 13.5, fontWeight: 600 }}>
               {error}
             </p>
+          </GlassCard>
+        )}
+
+        {mensajeExito && (
+          <GlassCard tint="green" padding={16}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <p style={{ margin: 0, color: 'var(--green-text)', fontSize: 13.5, fontWeight: 600 }}>
+                ✅ {mensajeExito}
+              </p>
+              <button
+                type="button"
+                onClick={() => setMensajeExito(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 16,
+                  color: 'var(--green-text)',
+                  padding: '2px 6px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </GlassCard>
         )}
 

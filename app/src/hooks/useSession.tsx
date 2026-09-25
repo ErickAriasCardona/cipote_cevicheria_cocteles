@@ -57,6 +57,14 @@ export function SesionProvider({ children }: { children: ReactNode }) {
       const { data } = await supabase.auth.getSession()
       const session = data.session
       if (session?.user) {
+        if (!session.user.email_confirmed_at) {
+          await supabase.auth.signOut()
+          if (activo) {
+            setUsuario(null)
+            setCargando(false)
+          }
+          return
+        }
         const perfil = await resolverPerfil(session.user.id, session.user.email ?? '')
         if (activo) setUsuario(perfil)
       }
@@ -67,6 +75,12 @@ export function SesionProvider({ children }: { children: ReactNode }) {
 
     const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session?.user) {
+        setUsuario(null)
+        setCargando(false)
+        return
+      }
+      if (!session.user.email_confirmed_at) {
+        await supabase.auth.signOut()
         setUsuario(null)
         setCargando(false)
         return

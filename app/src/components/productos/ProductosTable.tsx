@@ -54,6 +54,8 @@ function etiquetaCategoria(categoria: Producto['categoria']): { texto: string; c
       return { texto: 'Granizado', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.14)' }
     case 'bebida':
       return { texto: 'Bebida', color: '#2e9e5b', bg: 'rgba(46, 158, 91, 0.14)' }
+    case 'adicionales':
+      return { texto: 'Adicional', color: '#a855f7', bg: 'rgba(168, 85, 247, 0.14)' }
     case 'otro':
     default:
       return { texto: 'Otro', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.14)' }
@@ -175,7 +177,7 @@ function FilaProducto({
         </span>
       </td>
       <td style={{ padding: '12px 8px', width: 110, whiteSpace: 'nowrap', fontSize: 13, color: 'var(--text-primary)' }}>
-        {producto.categoria === 'otro' ? (
+        {producto.categoria === 'otro' || producto.categoria === 'adicionales' ? (
           <strong style={{ color: 'var(--brand-green)', fontSize: 13.5 }}>
             {producto.precio !== null
               ? formatearCOP(producto.precio)
@@ -239,7 +241,7 @@ function FilaProducto({
             title={
               expandido
                 ? 'Ocultar tamaños y precios'
-                : producto.categoria === 'otro'
+                : producto.categoria === 'otro' || producto.categoria === 'adicionales'
                 ? 'Editar detalles y precio directo'
                 : 'Editar / Configurar tamaños y precios'
             }
@@ -340,7 +342,10 @@ function DetalleProductoOtroInline({
         flexDirection: 'column',
         gap: 14,
         background: 'var(--tabs-wrap-bg)',
-        border: '1px solid rgba(245, 158, 11, 0.3)',
+        border:
+          producto.categoria === 'adicionales'
+            ? '1px solid rgba(168, 85, 247, 0.35)'
+            : '1px solid rgba(245, 158, 11, 0.3)',
         borderRadius: 14,
         padding: '18px 20px',
         boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
@@ -348,11 +353,20 @@ function DetalleProductoOtroInline({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h4 style={{ margin: '0 0 3px', fontSize: 15.5, fontWeight: 700, color: '#f59e0b' }}>
-            Detalles de "{producto.nombre}" (Categoría: Otros)
+          <h4
+            style={{
+              margin: '0 0 3px',
+              fontSize: 15.5,
+              fontWeight: 700,
+              color: producto.categoria === 'adicionales' ? '#a855f7' : '#f59e0b',
+            }}
+          >
+            Detalles de "{producto.nombre}" (Categoría: {producto.categoria === 'adicionales' ? 'Adicionales' : 'Otros'})
           </h4>
           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>
-            Este producto se vende por unidad con precio directo, sin requerir vasos ni mililitros.
+            {producto.categoria === 'adicionales'
+              ? 'Este adicional se vende por porción/unidad con precio directo, sin descontar vasos.'
+              : 'Este producto se vende por unidad con precio directo, sin requerir vasos ni mililitros.'}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -543,7 +557,7 @@ export function ProductosTable({
                         borderBottom: '2px solid var(--hr-line)',
                       }}
                     >
-                      {producto.categoria === 'otro' ? (
+                      {producto.categoria === 'otro' || producto.categoria === 'adicionales' ? (
                         <DetalleProductoOtroInline
                           producto={producto}
                           onGuardar={(precio, desc) => onActualizarOtro(producto.id, precio, desc)}

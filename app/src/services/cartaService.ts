@@ -137,6 +137,7 @@ export const cartaService = {
           granizados: FALLBACK_GRANIZADOS,
           bebidas: FALLBACK_BEBIDAS,
           otros: [],
+          adicionales: [],
           promociones: FALLBACK_PROMOS,
           todos: [...FALLBACK_CEVICHES, ...FALLBACK_GRANIZADOS, ...FALLBACK_BEBIDAS],
         }
@@ -187,7 +188,7 @@ export const cartaService = {
           id: p.id,
           nombre: p.nombre,
           categoria: p.categoria,
-          descripcion: p.descripcion || (p.categoria === 'ceviche' ? 'Camarones frescos con receta tradicional' : p.categoria === 'granizado' ? 'Refrescante y preparado al momento' : 'Acompañamiento ideal'),
+          descripcion: p.descripcion || (p.categoria === 'ceviche' ? 'Camarones frescos con receta tradicional' : p.categoria === 'granizado' ? 'Refrescante y preparado al momento' : p.categoria === 'adicionales' ? 'Adicional fresco para complementar tu pedido' : 'Acompañamiento ideal'),
           imagenUrl,
           precioDirecto,
           tamanos,
@@ -199,6 +200,7 @@ export const cartaService = {
       const granizados = productosMap.filter((p) => p.categoria === 'granizado')
       const bebidas = productosMap.filter((p) => p.categoria === 'bebida')
       const otros = productosMap.filter((p) => p.categoria === 'otro')
+      const adicionales = productosMap.filter((p) => p.categoria === 'adicionales')
 
       // Promociones
       const promociones: PromocionCarta[] = rawPromos.map((pr, idx) => ({
@@ -216,6 +218,7 @@ export const cartaService = {
         granizados,
         bebidas,
         otros,
+        adicionales,
         promociones,
         todos: productosMap,
       }
@@ -226,6 +229,7 @@ export const cartaService = {
         granizados: FALLBACK_GRANIZADOS,
         bebidas: FALLBACK_BEBIDAS,
         otros: [],
+        adicionales: [],
         promociones: FALLBACK_PROMOS,
         todos: [...FALLBACK_CEVICHES, ...FALLBACK_GRANIZADOS, ...FALLBACK_BEBIDAS],
       }

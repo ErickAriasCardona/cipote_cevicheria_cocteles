@@ -81,9 +81,9 @@ export function ProductosPage() {
 
   async function handleCrear(input: CrearProductoInput, tamanos: NuevoTamanoPrecioInput[]) {
     const nuevo = await productosService.crearProducto(input)
-    if (input.categoria !== 'otro') {
+    if (input.categoria !== 'otro' && input.categoria !== 'adicionales') {
       // input.categoria ya está acotado a 'ceviche' | 'granizado' | 'bebida'
-      // en esta rama (el branch 'otro' no manda tamaños, ver ProductoForm).
+      // en esta rama (el branch 'otro' y 'adicionales' no mandan tamaños, ver ProductoForm).
       const categoria = input.categoria as CategoriaTamanoVaso
       for (const tamano of tamanos) {
         const tamanoVaso = await tamanoVasoService.resolverOCrear({
@@ -141,7 +141,7 @@ export function ProductosPage() {
 
   async function handleCrearTamanoPrecio(input: ComboTamanoPrecioInput) {
     const producto = productos.find((p) => p.id === input.productoId)
-    if (!producto || producto.categoria === 'otro') return
+    if (!producto || producto.categoria === 'otro' || producto.categoria === 'adicionales') return
     const tamanoVaso = await tamanoVasoService.resolverOCrear({
       categoria: producto.categoria as CategoriaTamanoVaso,
       tipoUnidad: input.tipoUnidad,

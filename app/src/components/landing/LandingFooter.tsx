@@ -51,8 +51,8 @@ export function LandingFooter() {
           margin: '0 auto',
           padding: '0 24px',
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
-          gap: 40,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: 32,
           position: 'relative',
           zIndex: 1,
         }}
@@ -93,13 +93,27 @@ export function LandingFooter() {
             Horarios de Atención
           </h4>
           <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#94A3B8' }}>
-            <strong>Lunes a Viernes:</strong> 11:00 AM – 9:00 PM
-          </p>
-          <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#94A3B8' }}>
-            <strong>Sábados y Domingos:</strong> 10:30 AM – 10:00 PM
+            <strong style={{ color: '#fff' }}>De domingo a domingo:</strong><br />
+            1:30 PM – 8:30 PM
           </p>
           <p style={{ margin: 0, fontSize: 13, color: '#41AFE0', fontWeight: 600 }}>
-            Domicilios activos toda la jornada
+            🛵 Domicilios hasta las 8:00 PM
+          </p>
+        </div>
+
+        {/* Ubicación / Sede */}
+        <div>
+          <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: '#fff' }}>
+            Ubicación
+          </h4>
+          <p style={{ margin: '0 0 6px', fontSize: 13.5, color: '#94A3B8' }}>
+            <strong style={{ color: '#fff' }}>Avenida Guabinal No. 51-53</strong>
+          </p>
+          <p style={{ margin: '0 0 8px', fontSize: 13.5, color: '#94A3B8' }}>
+            Mercacentro N°4
+          </p>
+          <p style={{ margin: 0, fontSize: 12.5, color: '#64748B' }}>
+            📍 Ibagué, Tolima
           </p>
         </div>
 
@@ -108,8 +122,11 @@ export function LandingFooter() {
           <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 700, color: '#fff' }}>
             Pedidos & Contacto
           </h4>
-          <p style={{ margin: '0 0 8px', fontSize: 13.5, color: '#94A3B8' }}>
-            ¿Tienes dudas, eventos o pedidos especiales?
+          <p style={{ margin: '0 0 4px', fontSize: 13.5, color: '#94A3B8' }}>
+            Línea directa y domicilios:
+          </p>
+          <p style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 800, color: '#fff' }}>
+            📞 311 230 2233
           </p>
           <a
             href={`https://wa.me/${WHATSAPP_NUMBER}`}
@@ -127,10 +144,11 @@ export function LandingFooter() {
               fontSize: 13.5,
               fontWeight: 700,
               boxShadow: '0 4px 14px rgba(46, 158, 91, 0.4)',
+              transition: 'transform 0.15s ease',
             }}
           >
             <IconoWhatsApp size={18} />
-            <span>Escribir al WhatsApp (+57 314 549 9206)</span>
+            <span>Escribir al WhatsApp (+57 311 230 2233)</span>
           </a>
         </div>
       </div>
