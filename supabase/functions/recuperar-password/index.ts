@@ -27,6 +27,7 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
   const resendApiKey = Deno.env.get('RESEND_API_KEY')
   const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'Cipote Ceviche Cocteles <onboarding@resend.dev>'
   const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://cipote-ceviche-cocteles.vercel.app'
@@ -124,12 +125,20 @@ Deno.serve(async (req: Request) => {
           resendErr.toLowerCase().includes('verify a domain')
 
         if (esErrorDominio) {
+          console.warn('Resend en modo prueba: despachando correo de recuperación vía Supabase Auth.')
+          const supabaseAnon = createClient(supabaseUrl, anonKey)
+          const { error: resetAuthError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
+            redirectTo,
+          })
+          if (resetAuthError) {
+            return jsonResponse(
+              { error: `No se pudo enviar el correo de recuperación a ${email}: ${resetAuthError.message}` },
+              502,
+            )
+          }
           return jsonResponse(
-            {
-              error:
-                'El servicio de correos está en modo de prueba y solo permite envíos al propietario de la cuenta (eariassena19@gmail.com). Para restablecer tu contraseña, solicita ayuda al Administrador o verifica un dominio en resend.com.',
-            },
-            403,
+            { ok: true, mensaje: 'Enlace de recuperación enviado exitosamente a tu correo.' },
+            200,
           )
         }
 
@@ -140,13 +149,33 @@ Deno.serve(async (req: Request) => {
       }
     } catch (err) {
       console.error('Excepción al conectar con Resend:', err)
+      const supabaseAnon = createClient(supabaseUrl, anonKey)
+      const { error: resetAuthError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
+        redirectTo,
+      })
+      if (resetAuthError) {
+        return jsonResponse(
+          { error: `Error enviando correo de recuperación: ${resetAuthError.message}` },
+          502,
+        )
+      }
       return jsonResponse(
-        { error: 'Error de conexión al enviar el correo de recuperación.' },
-        502,
+        { ok: true, mensaje: 'Enlace de recuperación enviado exitosamente a tu correo.' },
+        200,
       )
     }
   } else {
-    console.warn('RESEND_API_KEY no configurada en Edge Functions.')
+    // Si no hay Resend API Key, enviamos vía Supabase Auth
+    const supabaseAnon = createClient(supabaseUrl, anonKey)
+    const { error: resetAuthError } = await supabaseAnon.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    })
+    if (resetAuthError) {
+      return jsonResponse(
+        { error: `Error enviando correo de recuperación vía Supabase: ${resetAuthError.message}` },
+        502,
+      )
+    }
   }
 
   return jsonResponse(
