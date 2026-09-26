@@ -80,6 +80,33 @@ function IconoRefrescar() {
   )
 }
 
+function IconoSortNeutro() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <path d="M7 15l5 5 5-5" />
+      <path d="M7 9l5-5 5 5" />
+    </svg>
+  )
+}
+
+function IconoSortAsc() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand-blue, #41afe0)' }}>
+      <path d="M18 15l-6-6-6 6" />
+    </svg>
+  )
+}
+
+function IconoSortDesc() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand-blue, #41afe0)' }}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
+type ColumnaOrdenKardex = 'fechaHora' | 'insumo' | 'tipo' | 'cantidad' | 'stockResultante' | 'usuario'
+
 export function KardexMovimientosTable({ insumos }: KardexMovimientosTableProps) {
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([])
   const [cargando, setCargando] = useState(true)
@@ -90,6 +117,19 @@ export function KardexMovimientosTable({ insumos }: KardexMovimientosTableProps)
   const [tipoFiltro, setTipoFiltro] = useState<TipoMovimientoInventario | 'todos'>('todos')
   const [busqueda, setBusqueda] = useState<string>('')
   const [limite, setLimite] = useState<number>(100)
+
+  // Ordenamiento interactivo de columnas
+  const [columnaOrden, setColumnaOrden] = useState<ColumnaOrdenKardex>('fechaHora')
+  const [direccionOrden, setDireccionOrden] = useState<'asc' | 'desc'>('desc')
+
+  function handleOrdenar(columna: ColumnaOrdenKardex) {
+    if (columnaOrden === columna) {
+      setDireccionOrden((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setColumnaOrden(columna)
+      setDireccionOrden(columna === 'fechaHora' ? 'desc' : 'asc')
+    }
+  }
 
   const cargarMovimientos = async () => {
     setCargando(true)
@@ -123,6 +163,29 @@ export function KardexMovimientosTable({ insumos }: KardexMovimientosTableProps)
       return nom.includes(q) || obs.includes(q) || usr.includes(q)
     })
   }, [movimientos, busqueda])
+
+  // Ordenamiento interactivo aplicado sobre los movimientos filtrados
+  const movimientosOrdenados = useMemo(() => {
+    return [...movimientosFiltrados].sort((a, b) => {
+      let cmp = 0
+      if (columnaOrden === 'fechaHora') {
+        const timeA = new Date(a.createdAt).getTime() || 0
+        const timeB = new Date(b.createdAt).getTime() || 0
+        cmp = timeA - timeB
+      } else if (columnaOrden === 'insumo') {
+        cmp = (a.insumoNombre || '').localeCompare(b.insumoNombre || '', 'es', { sensitivity: 'base' })
+      } else if (columnaOrden === 'tipo') {
+        cmp = (a.tipoMovimiento || '').localeCompare(b.tipoMovimiento || '', 'es', { sensitivity: 'base' })
+      } else if (columnaOrden === 'cantidad') {
+        cmp = Number(a.cantidad) - Number(b.cantidad)
+      } else if (columnaOrden === 'stockResultante') {
+        cmp = Number(a.stockResultante) - Number(b.stockResultante)
+      } else if (columnaOrden === 'usuario') {
+        cmp = (a.usuarioNombre || '').localeCompare(b.usuarioNombre || '', 'es', { sensitivity: 'base' })
+      }
+      return direccionOrden === 'asc' ? cmp : -cmp
+    })
+  }, [movimientosFiltrados, columnaOrden, direccionOrden])
 
   const renderBadgeTipo = (tipo: TipoMovimientoInventario) => {
     switch (tipo) {
@@ -248,6 +311,43 @@ export function KardexMovimientosTable({ insumos }: KardexMovimientosTableProps)
           </span>
         )
     }
+  }
+
+  function renderTh(columna: ColumnaOrdenKardex, label: string, align: 'left' | 'center' | 'right' = 'left') {
+    const estaActiva = columnaOrden === columna
+    return (
+      <th
+        onClick={() => handleOrdenar(columna)}
+        title={`Ordenar por ${label} (${estaActiva && direccionOrden === 'asc' ? 'descendente' : 'ascendente'})`}
+        style={{
+          padding: '10px 12px',
+          textAlign: align,
+          cursor: 'pointer',
+          userSelect: 'none',
+          transition: 'all 0.15s ease',
+          color: estaActiva ? 'var(--brand-blue, #41afe0)' : 'var(--text-faint)',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+            width: '100%',
+          }}
+        >
+          <span>{label}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+            {estaActiva ? (
+              direccionOrden === 'asc' ? <IconoSortAsc /> : <IconoSortDesc />
+            ) : (
+              <IconoSortNeutro />
+            )}
+          </span>
+        </div>
+      </th>
+    )
   }
 
   return (
@@ -407,17 +507,17 @@ export function KardexMovimientosTable({ insumos }: KardexMovimientosTableProps)
                 color: 'var(--text-faint)',
               }}
             >
-              <th style={{ padding: '10px 12px' }}>Fecha y Hora</th>
-              <th style={{ padding: '10px 12px' }}>Insumo</th>
-              <th style={{ padding: '10px 12px' }}>Tipo Movimiento</th>
-              <th style={{ padding: '10px 12px', textAlign: 'right' }}>Cantidad</th>
-              <th style={{ padding: '10px 12px', textAlign: 'right' }}>Stock Resultante</th>
-              <th style={{ padding: '10px 12px' }}>Responsable</th>
-              <th style={{ padding: '10px 12px' }}>Detalle / Observaciones</th>
+              {renderTh('fechaHora', 'Fecha y Hora', 'left')}
+              {renderTh('insumo', 'Insumo', 'left')}
+              {renderTh('tipo', 'Tipo Movimiento', 'left')}
+              {renderTh('cantidad', 'Cantidad', 'right')}
+              {renderTh('stockResultante', 'Stock Resultante', 'right')}
+              {renderTh('usuario', 'Responsable', 'left')}
+              <th style={{ padding: '10px 12px', userSelect: 'none' }}>Detalle / Observaciones</th>
             </tr>
           </thead>
           <tbody>
-            {movimientosFiltrados.length === 0 ? (
+            {movimientosOrdenados.length === 0 ? (
               <tr>
                 <td
                   colSpan={7}
@@ -434,7 +534,7 @@ export function KardexMovimientosTable({ insumos }: KardexMovimientosTableProps)
                 </td>
               </tr>
             ) : (
-              movimientosFiltrados.map((m) => {
+              movimientosOrdenados.map((m) => {
                 const esPositivo = m.cantidad > 0
                 const esNegativo = m.cantidad < 0
                 const unidad = m.insumoUnidad ?? 'ud'

@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import type { Insumo } from '../../types/insumo'
 import { useConfirmacion } from '../../hooks/useConfirmacion'
 import { StatusPill } from '../ui/StatusPill'
@@ -17,6 +18,9 @@ interface FilaInsumoProps {
   onEditar: (insumo: Insumo) => void
   onEliminar: (insumo: Insumo) => void
 }
+
+type ColumnaOrdenInsumo = 'nombre' | 'tipo' | 'unidad' | 'stockActual' | 'stockMinimo' | 'activo'
+type DireccionOrden = 'asc' | 'desc'
 
 function IconoPower() {
   return (
@@ -45,6 +49,47 @@ function IconoTrash() {
       <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   )
+}
+
+function IconoSortNeutro() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35 }}>
+      <path d="M7 15l5 5 5-5" />
+      <path d="M7 9l5-5 5 5" />
+    </svg>
+  )
+}
+
+function IconoSortAsc() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand-blue, #41afe0)' }}>
+      <path d="M18 15l-6-6-6 6" />
+    </svg>
+  )
+}
+
+function IconoSortDesc() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--brand-blue, #41afe0)' }}>
+      <path d="M6 9l6 6 6-6" />
+    </svg>
+  )
+}
+
+function getTipoEtiqueta(insumo: Insumo): string {
+  if (insumo.tipo === 'vaso') {
+    return insumo.categoriaVaso === 'granizado' ? 'Vaso Granizado' : 'Vaso Ceviche/Cóctel'
+  }
+  if (insumo.tipo === 'otro') return 'Otro'
+  return insumo.tipo || ''
+}
+
+function getValorUnidadNumerico(insumo: Insumo): number {
+  if (typeof insumo.valorUnidad === 'number' && !isNaN(insumo.valorUnidad) && insumo.valorUnidad > 0) {
+    return insumo.valorUnidad
+  }
+  const match = (insumo.unidadMedida || insumo.nombre || '').match(/(\d+(\.\d+)?)/)
+  return match ? parseFloat(match[1]) : 0
 }
 
 function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsumoProps) {
@@ -141,7 +186,7 @@ function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsum
         </span>
       </td>
       {/* Columna Estado: SOLO ICONO activar/desactivar */}
-      <td style={{ padding: '14px 12px', width: 75 }}>
+      <td style={{ padding: '14px 12px', width: 75, textAlign: 'center' }}>
         <button
           type="button"
           onClick={() => onCambiarActivo(insumo)}
@@ -167,9 +212,9 @@ function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsum
           <IconoPower />
         </button>
       </td>
-      {/* Columna Acciones: ICONOS de editar y eliminar (eliminar: solo Administrador, ver InsumosPage/router) */}
+      {/* Columna Acciones: ICONOS de editar y eliminar */}
       <td style={{ padding: '14px 12px', width: 120 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
           <button
             type="button"
             title={`Editar insumo "${insumo.nombre}"`}
@@ -225,6 +270,72 @@ export function InsumosTable({
 }: InsumosTableProps) {
   const { confirmar } = useConfirmacion()
 
+  // Ordenamiento por defecto: por TIPO y luego por UNIDADES (ascendente)
+  const [columnaOrden, setColumnaOrden] = useState<ColumnaOrdenInsumo>('tipo')
+  const [direccionOrden, setDireccionOrden] = useState<DireccionOrden>('asc')
+
+  function handleOrdenar(columna: ColumnaOrdenInsumo) {
+    if (columnaOrden === columna) {
+      setDireccionOrden((prev) => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setColumnaOrden(columna)
+      setDireccionOrden('asc')
+    }
+  }
+
+  const insumosOrdenados = useMemo(() => {
+    return [...insumos].sort((a, b) => {
+      let cmp = 0
+
+      if (columnaOrden === 'tipo') {
+        const tipoA = getTipoEtiqueta(a)
+        const tipoB = getTipoEtiqueta(b)
+        cmp = tipoA.localeCompare(tipoB, 'es', { sensitivity: 'base' })
+        // Criterio secundario: orden en unidades (ej. 8oz, 10oz, etc.)
+        if (cmp === 0) {
+          const uA = getValorUnidadNumerico(a)
+          const uB = getValorUnidadNumerico(b)
+          cmp = uA - uB
+        }
+        if (cmp === 0) {
+          cmp = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+        }
+      } else if (columnaOrden === 'nombre') {
+        cmp = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+        if (cmp === 0) {
+          cmp = getValorUnidadNumerico(a) - getValorUnidadNumerico(b)
+        }
+      } else if (columnaOrden === 'unidad') {
+        const uA = getValorUnidadNumerico(a)
+        const uB = getValorUnidadNumerico(b)
+        cmp = uA - uB
+        if (cmp === 0) {
+          cmp = getTipoEtiqueta(a).localeCompare(getTipoEtiqueta(b), 'es', { sensitivity: 'base' })
+        }
+        if (cmp === 0) {
+          cmp = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+        }
+      } else if (columnaOrden === 'stockActual') {
+        cmp = (Number(a.stockActual) || 0) - (Number(b.stockActual) || 0)
+        if (cmp === 0) {
+          cmp = getTipoEtiqueta(a).localeCompare(getTipoEtiqueta(b), 'es', { sensitivity: 'base' })
+        }
+      } else if (columnaOrden === 'stockMinimo') {
+        cmp = (Number(a.stockMinimo) || 0) - (Number(b.stockMinimo) || 0)
+        if (cmp === 0) {
+          cmp = (Number(a.stockMinimoDiario) || 0) - (Number(b.stockMinimoDiario) || 0)
+        }
+      } else if (columnaOrden === 'activo') {
+        cmp = a.activo === b.activo ? 0 : a.activo ? -1 : 1
+        if (cmp === 0) {
+          cmp = getTipoEtiqueta(a).localeCompare(getTipoEtiqueta(b), 'es', { sensitivity: 'base' })
+        }
+      }
+
+      return direccionOrden === 'asc' ? cmp : -cmp
+    })
+  }, [insumos, columnaOrden, direccionOrden])
+
   async function handleCambiarActivo(insumo: Insumo) {
     const siguienteActivo = !insumo.activo
     const ok = await confirmar({
@@ -258,6 +369,44 @@ export function InsumosTable({
     )
   }
 
+  function renderTh(columna: ColumnaOrdenInsumo, label: string, align: 'left' | 'center' | 'right' = 'left', width?: number | string) {
+    const estaActiva = columnaOrden === columna
+    return (
+      <th
+        onClick={() => handleOrdenar(columna)}
+        title={`Ordenar por ${label} (${estaActiva && direccionOrden === 'asc' ? 'descendente' : 'ascendente'})`}
+        style={{
+          padding: '10px 12px',
+          textAlign: align,
+          width,
+          cursor: 'pointer',
+          userSelect: 'none',
+          transition: 'all 0.15s ease',
+          color: estaActiva ? 'var(--brand-blue, #41afe0)' : 'var(--text-faint)',
+        }}
+      >
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            justifyContent: align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start',
+            width: '100%',
+          }}
+        >
+          <span>{label}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+            {estaActiva ? (
+              direccionOrden === 'asc' ? <IconoSortAsc /> : <IconoSortDesc />
+            ) : (
+              <IconoSortNeutro />
+            )}
+          </span>
+        </div>
+      </th>
+    )
+  }
+
   return (
     <div style={{ overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
@@ -272,17 +421,17 @@ export function InsumosTable({
               color: 'var(--text-faint)',
             }}
           >
-            <th style={{ padding: '10px 12px' }}>Nombre</th>
-            <th style={{ padding: '10px 12px' }}>Tipo</th>
-            <th style={{ padding: '10px 12px' }}>Unidad</th>
-            <th style={{ padding: '10px 12px', textAlign: 'center', width: 110 }}>Stock actual</th>
-            <th style={{ padding: '10px 12px' }}>Gen / Día</th>
-            <th style={{ padding: '10px 12px', width: 75 }}>Estado</th>
-            <th style={{ padding: '10px 12px', width: 120 }}>Acciones</th>
+            {renderTh('nombre', 'Nombre', 'left')}
+            {renderTh('tipo', 'Tipo', 'left')}
+            {renderTh('unidad', 'Unidad', 'left')}
+            {renderTh('stockActual', 'Stock actual', 'center', 110)}
+            {renderTh('stockMinimo', 'Gen / Día', 'left')}
+            {renderTh('activo', 'Estado', 'center', 75)}
+            <th style={{ padding: '10px 12px', width: 120, textAlign: 'center', userSelect: 'none' }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {insumos.map((insumo) => (
+          {insumosOrdenados.map((insumo) => (
             <FilaInsumo
               key={insumo.id}
               insumo={insumo}

@@ -55,6 +55,8 @@ export const insumosService = {
     const { data, error } = await supabase
       .from('insumos')
       .select(COLUMNAS)
+      .order('tipo', { ascending: true })
+      .order('valor_unidad', { ascending: true })
       .order('nombre', { ascending: true })
     if (error) throw error
     return (data as InsumoRow[]).map(mapRow)
