@@ -1,16 +1,15 @@
 // Edge Function: crear-usuario (BD-01.5, RF-01.1/HU-01.1)
 //
-// Flujo con confirmación de correo electrónico obligatoria vía Resend API:
+// Flujo con confirmación de correo electrónico obligatoria vía SMTP (Supabase Auth):
 //   1. Verifica rol Administrador server-side (resuelve el rol directamente
 //      desde usuarios_perfil con service_role).
-//   2. Genera el enlace de confirmación y crea el usuario en auth.users en estado
-//      no confirmado (email_confirmed_at = null) vía admin.generateLink.
+//   2. Crea el usuario en auth.users en estado no confirmado (email_confirmed_at = null)
+//      con la contraseña inicial asignada y metadata (nombre_completo, password_inicial).
 //   3. Inserta su fila en usuarios_perfil en la misma operación.
-//   4. Envía el email con el enlace y estilo de marca profesional mediante Resend API.
+//   4. Envía el email de invitación/activación oficial mediante el servidor SMTP con la plantilla de Cipote.
 //   5. Si algún paso falla, compensa eliminando el usuario para no dejar cuentas huérfanas.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
-import { generarEmailConfirmacionHtml } from './emailTemplate.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +24,7 @@ interface CrearUsuarioBody {
   email?: unknown
   password?: unknown
   rol?: unknown
+  redirectTo?: unknown
 }
 
 function jsonResponse(body: unknown, status: number): Response {
@@ -56,8 +56,6 @@ Deno.serve(async (req: Request) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-  const resendApiKey = Deno.env.get('RESEND_API_KEY')
-  const resendFromEmail = Deno.env.get('RESEND_FROM_EMAIL') || 'Cipote Ceviche Cocteles <onboarding@resend.dev>'
   const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://cipote-ceviche-cocteles.vercel.app'
 
   const authHeader = req.headers.get('Authorization')
@@ -114,192 +112,80 @@ Deno.serve(async (req: Request) => {
       ? body.redirectTo.trim()
       : `${frontendUrl.replace(/\/+$/, '')}/login?confirmed=true`
 
-  const puedeUsarResend =
-    Boolean(resendApiKey) &&
-    (!resendFromEmail.includes('resend.dev') || datos.email === 'eariassena19@gmail.com')
+  // 1. Crear el usuario en auth.users con la contraseña fijada y email_confirm en false
+  const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email: datos.email,
+    password: datos.password,
+    email_confirm: false,
+    user_metadata: {
+      nombre_completo: datos.nombreCompleto,
+      password_inicial: datos.password,
+    },
+  })
 
-  let userId: string
-
-  if (puedeUsarResend) {
-    // 1A. FLUJO RESEND CON PLANTILLA DE MARCA (cuando hay dominio propio verificado o es la cuenta autorizada de prueba)
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
-      email: datos.email,
-      password: datos.password,
-      options: {
-        data: { nombre_completo: datos.nombreCompleto },
-        redirectTo,
-      },
-    })
-
-    if (linkError || !linkData?.user) {
-      const errorMsg = linkError?.message?.includes('already been registered')
+  if (createError || !createData?.user) {
+    const errorMsg =
+      createError?.message?.includes('already registered') ||
+      createError?.message?.includes('already been registered')
         ? 'Ya existe un usuario registrado con este correo electrónico.'
-        : (linkError?.message ?? 'No se pudo crear el usuario en el sistema de autenticación.')
-      return jsonResponse({ error: errorMsg }, 422)
-    }
+        : (createError?.message ?? 'No se pudo crear el usuario en el sistema de autenticación.')
+    return jsonResponse({ error: errorMsg }, 422)
+  }
 
-    userId = linkData.user.id
-    let actionLink = linkData.properties?.action_link ?? redirectTo
-    try {
-      const urlObj = new URL(actionLink)
-      urlObj.searchParams.set('redirect_to', redirectTo)
-      actionLink = urlObj.toString()
-    } catch {
-      // fallback
-    }
+  const userId = createData.user.id
 
-    // Insertar fila en usuarios_perfil
-    const { data: perfil, error: perfilError } = await supabaseAdmin
-      .from('usuarios_perfil')
-      .insert({
-        id: userId,
-        nombre_completo: datos.nombreCompleto,
-        rol: datos.rol,
-        activo: true,
-      })
-      .select('id, nombre_completo, rol, activo, created_at, updated_at')
-      .single()
-
-    if (perfilError || !perfil) {
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      return jsonResponse(
-        { error: perfilError?.message ?? 'No se pudo crear el perfil del usuario.' },
-        500,
-      )
-    }
-
-    const emailHtml = generarEmailConfirmacionHtml({
-      nombreCompleto: datos.nombreCompleto,
-      email: datos.email,
-      password: datos.password,
+  // 2. Insertar fila en usuarios_perfil
+  const { data: perfil, error: perfilError } = await supabaseAdmin
+    .from('usuarios_perfil')
+    .insert({
+      id: userId,
+      nombre_completo: datos.nombreCompleto,
       rol: datos.rol,
-      actionLink,
-      logoUrl: `${frontendUrl.replace(/\/+$/, '')}/logo.jpeg`,
+      activo: true,
     })
+    .select('id, nombre_completo, rol, activo, created_at, updated_at')
+    .single()
 
-    try {
-      const resendRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: resendFromEmail,
-          to: [datos.email],
-          subject: '🦐 Confirma tu correo para acceder a Cipote Ceviche Cocteles',
-          html: emailHtml,
-        }),
-      })
-
-      if (!resendRes.ok) {
-        const resendErr = await resendRes.text()
-        console.error('Error enviando correo con Resend:', resendErr)
-        await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
-        await supabaseAdmin.auth.admin.deleteUser(userId)
-        return jsonResponse(
-          {
-            error: `No se pudo enviar el correo de confirmación (Resend: ${resendErr}). La cuenta no fue creada para mantener la regla de verificación obligatoria.`,
-          },
-          502,
-        )
-      }
-    } catch (errResend) {
-      console.error('Excepción al conectar con Resend:', errResend)
-      await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      return jsonResponse(
-        {
-          error: `Error de conexión al enviar el correo con Resend: ${errResend instanceof Error ? errResend.message : String(errResend)}`,
-        },
-        502,
-      )
-    }
-
+  if (perfilError || !perfil) {
+    await supabaseAdmin.auth.admin.deleteUser(userId)
     return jsonResponse(
-      {
-        usuario: perfil,
-        emailEnviado: true,
-        aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de verificación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta.`,
-      },
-      200,
-    )
-  } else {
-    // 1B. FLUJO NATIVO DE SUPABASE AUTH (Garantiza entrega de correo, token válido y estado no verificado estricto)
-    // 1. Crear el usuario con la contraseña fijada por el administrador y email_confirm en false
-    const { data: createData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email: datos.email,
-      password: datos.password,
-      email_confirm: false,
-      user_metadata: {
-        nombre_completo: datos.nombreCompleto,
-      },
-    })
-
-    if (createError || !createData?.user) {
-      const errorMsg =
-        createError?.message?.includes('already registered') ||
-        createError?.message?.includes('already been registered')
-          ? 'Ya existe un usuario registrado con este correo electrónico.'
-          : (createError?.message ?? 'No se pudo crear el usuario en el sistema de autenticación.')
-      return jsonResponse({ error: errorMsg }, 422)
-    }
-
-    userId = createData.user.id
-
-    // 2. Insertar fila en usuarios_perfil
-    const { data: perfil, error: perfilError } = await supabaseAdmin
-      .from('usuarios_perfil')
-      .insert({
-        id: userId,
-        nombre_completo: datos.nombreCompleto,
-        rol: datos.rol,
-        activo: true,
-      })
-      .select('id, nombre_completo, rol, activo, created_at, updated_at')
-      .single()
-
-    if (perfilError || !perfil) {
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      return jsonResponse(
-        { error: perfilError?.message ?? 'No se pudo crear el perfil del usuario.' },
-        500,
-      )
-    }
-
-    // 3. Enviar invitación con el enlace de confirmación.
-    // Al enviarse después de creada la contraseña, el token de invitación se genera fresco
-    // y no es invalidado por modificaciones posteriores.
-    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-      datos.email,
-      {
-        redirectTo,
-        data: {
-          nombre_completo: datos.nombreCompleto,
-        },
-      },
-    )
-
-    if (inviteError) {
-      console.error('Error enviando invitación por Supabase Auth:', inviteError)
-      await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
-      await supabaseAdmin.auth.admin.deleteUser(userId)
-      return jsonResponse(
-        {
-          error: `No se pudo enviar el correo de verificación a ${datos.email} (${inviteError.message}). La cuenta no fue creada.`,
-        },
-        502,
-      )
-    }
-
-    return jsonResponse(
-      {
-        usuario: perfil,
-        emailEnviado: true,
-        aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de confirmación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta mediante el enlace recibido.`,
-      },
-      200,
+      { error: perfilError?.message ?? 'No se pudo crear el perfil del usuario.' },
+      500,
     )
   }
+
+  // 3. Enviar invitación con el enlace de confirmación vía SMTP oficial
+  // Incluimos tanto nombre_completo como password_inicial para que la plantilla HTML
+  // oficial de Cipote muestre los datos de acceso completos y exactos.
+  const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+    datos.email,
+    {
+      redirectTo,
+      data: {
+        nombre_completo: datos.nombreCompleto,
+        password_inicial: datos.password,
+      },
+    },
+  )
+
+  if (inviteError) {
+    console.error('Error enviando invitación por Supabase Auth SMTP:', inviteError)
+    await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
+    await supabaseAdmin.auth.admin.deleteUser(userId)
+    return jsonResponse(
+      {
+        error: `No se pudo enviar el correo de verificación a ${datos.email} (${inviteError.message}). La cuenta no fue creada.`,
+      },
+      502,
+    )
+  }
+
+  return jsonResponse(
+    {
+      usuario: perfil,
+      emailEnviado: true,
+      aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de confirmación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta mediante el enlace recibido.`,
+    },
+    200,
+  )
 })
