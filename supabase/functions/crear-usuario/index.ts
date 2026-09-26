@@ -1,15 +1,19 @@
 // Edge Function: crear-usuario (BD-01.5, RF-01.1/HU-01.1)
 //
-// Flujo con confirmación de correo electrónico obligatoria vía SMTP (Supabase Auth):
+// Flujo con confirmación de correo electrónico obligatoria vía SMTP (Gmail):
 //   1. Verifica rol Administrador server-side (resuelve el rol directamente
 //      desde usuarios_perfil con service_role).
 //   2. Crea el usuario en auth.users en estado no confirmado (email_confirmed_at = null)
-//      con la contraseña inicial asignada y metadata (nombre_completo, password_inicial).
+//      con la contraseña inicial asignada y metadata (nombre_completo).
 //   3. Inserta su fila en usuarios_perfil en la misma operación.
-//   4. Envía el email de invitación/activación oficial mediante el servidor SMTP con la plantilla de Cipote.
-//   5. Si algún paso falla, compensa eliminando el usuario para no dejar cuentas huérfanas.
+//   4. Genera el enlace criptográfico oficial de activación vía Supabase Auth generateLink.
+//   5. Despacha el correo electrónico con diseño corporativo oficial y la contraseña visible
+//      directamente a través del servidor SMTP (Gmail).
+//   6. Si algún paso falla, compensa eliminando el usuario para no dejar cuentas huérfanas.
 
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import nodemailer from 'npm:nodemailer@6.9.15'
+import { generarEmailConfirmacionHtml } from './emailTemplate.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -42,7 +46,7 @@ function validarPayload(
   if (typeof email !== 'string' || email.trim().length === 0) return null
   if (typeof password !== 'string' || password.length < 6) return null
   if (rol !== 'administrador' && rol !== 'cajero') return null
-  return { nombreCompleto: nombre_completo.trim(), email: email.trim(), password, rol }
+  return { nombreCompleto: nombre_completo.trim(), email: email.trim().toLowerCase(), password, rol }
 }
 
 Deno.serve(async (req: Request) => {
@@ -57,6 +61,13 @@ Deno.serve(async (req: Request) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
   const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://cipote-ceviche-cocteles.vercel.app'
+
+  // Configuración del servidor SMTP (Gmail)
+  const smtpHost = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com'
+  const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '465', 10)
+  const smtpUser = Deno.env.get('SMTP_USER') || 'eariassena19@gmail.com'
+  const smtpPass = Deno.env.get('SMTP_PASS') || 'isqeknhxpefjspim'
+  const smtpFrom = Deno.env.get('SMTP_FROM') || 'Cipote Ceviche Cocteles <eariassena19@gmail.com>'
 
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) {
@@ -119,7 +130,6 @@ Deno.serve(async (req: Request) => {
     email_confirm: false,
     user_metadata: {
       nombre_completo: datos.nombreCompleto,
-      password_inicial: datos.password,
     },
   })
 
@@ -154,27 +164,62 @@ Deno.serve(async (req: Request) => {
     )
   }
 
-  // 3. Enviar invitación con el enlace de confirmación vía SMTP oficial
-  // Incluimos tanto nombre_completo como password_inicial para que la plantilla HTML
-  // oficial de Cipote muestre los datos de acceso completos y exactos.
-  const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-    datos.email,
-    {
+  // 3. Generar enlace oficial de verificación / activación
+  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'signup',
+    email: datos.email,
+    password: datos.password,
+    options: {
       redirectTo,
-      data: {
-        nombre_completo: datos.nombreCompleto,
-        password_inicial: datos.password,
-      },
     },
-  )
+  })
 
-  if (inviteError) {
-    console.error('Error enviando invitación por Supabase Auth SMTP:', inviteError)
+  const actionLink = linkData?.properties?.action_link
+  if (linkError || !actionLink) {
+    console.error('Error generando enlace de verificación:', linkError)
     await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
     await supabaseAdmin.auth.admin.deleteUser(userId)
     return jsonResponse(
+      { error: 'No se pudo generar el enlace de confirmación para el usuario.' },
+      500,
+    )
+  }
+
+  // 4. Generar el correo electrónico con diseño corporativo y contraseña visible
+  const html = generarEmailConfirmacionHtml({
+    nombreCompleto: datos.nombreCompleto,
+    email: datos.email,
+    password: datos.password,
+    rol: datos.rol,
+    actionLink,
+  })
+
+  // 5. Enviar el correo directamente mediante el servidor SMTP (Gmail)
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: {
+      user: smtpUser,
+      pass: smtpPass,
+    },
+  })
+
+  try {
+    await transporter.sendMail({
+      from: smtpFrom,
+      to: datos.email,
+      subject: '🎉 Te damos la bienvenida a Cipote Ceviche Cocteles — Confirma tu cuenta',
+      html,
+    })
+  } catch (smtpErr) {
+    console.error('Error enviando correo vía SMTP:', smtpErr)
+    await supabaseAdmin.from('usuarios_perfil').delete().eq('id', userId)
+    await supabaseAdmin.auth.admin.deleteUser(userId)
+    const errMessage = smtpErr instanceof Error ? smtpErr.message : String(smtpErr)
+    return jsonResponse(
       {
-        error: `No se pudo enviar el correo de verificación a ${datos.email} (${inviteError.message}). La cuenta no fue creada.`,
+        error: `No se pudo enviar el correo de verificación a ${datos.email} mediante el servidor SMTP (${errMessage}). La cuenta no fue creada.`,
       },
       502,
     )
@@ -184,7 +229,7 @@ Deno.serve(async (req: Request) => {
     {
       usuario: perfil,
       emailEnviado: true,
-      aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de confirmación a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta mediante el enlace recibido.`,
+      aviso: `Usuario "${datos.nombreCompleto}" creado exitosamente. Se envió el correo de confirmación con sus credenciales a ${datos.email}. El usuario no podrá ingresar al sistema hasta que confirme su cuenta mediante el enlace recibido.`,
     },
     200,
   )
