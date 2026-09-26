@@ -92,26 +92,28 @@ function getValorUnidadNumerico(insumo: Insumo): number {
   return match ? parseFloat(match[1]) : 0
 }
 
-function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsumoProps) {
+function getEstadoStock(insumo: Insumo): 'bajo' | 'medio' | 'normal' {
   const stockActualNum = Number(insumo.stockActual) || 0
   const stockMinimoNum = Number(insumo.stockMinimo) || 0
   const stockMinimoDiarioNum = Number(insumo.stockMinimoDiario) || 0
 
-  let estadoStock: 'bajo' | 'medio' | 'normal' = 'normal'
   if (
     (stockMinimoDiarioNum > 0 && stockActualNum <= stockMinimoDiarioNum) ||
     (stockMinimoNum > 0 && stockMinimoDiarioNum === 0 && stockActualNum <= stockMinimoNum) ||
     stockActualNum <= 0
   ) {
-    estadoStock = 'bajo'
+    return 'bajo'
   } else if (
     (stockMinimoNum > 0 && stockActualNum <= stockMinimoNum) ||
     (stockMinimoDiarioNum > 0 && stockActualNum <= stockMinimoDiarioNum * 1.5)
   ) {
-    estadoStock = 'medio'
-  } else {
-    estadoStock = 'normal'
+    return 'medio'
   }
+  return 'normal'
+}
+
+function FilaInsumo({ insumo, onCambiarActivo, onEditar, onEliminar }: FilaInsumoProps) {
+  const estadoStock = getEstadoStock(insumo)
 
   return (
     <tr key={insumo.id} style={{ borderBottom: '1px solid var(--hr-line)' }}>
@@ -274,6 +276,55 @@ export function InsumosTable({
   const [columnaOrden, setColumnaOrden] = useState<ColumnaOrdenInsumo>('tipo')
   const [direccionOrden, setDireccionOrden] = useState<DireccionOrden>('asc')
 
+  // Filtros interactivos por cada columna
+  const [filtroNombre, setFiltroNombre] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState('')
+  const [filtroUnidad, setFiltroUnidad] = useState('')
+  const [filtroStock, setFiltroStock] = useState('')
+  const [filtroGenDia, setFiltroGenDia] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState('')
+
+  // Valores únicos dinámicos para poblar los filtros según los datos reales
+  const tiposUnicos = useMemo(() => {
+    const set = new Set<string>()
+    insumos.forEach((i) => {
+      const et = getTipoEtiqueta(i)
+      if (et) set.add(et)
+    })
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'es'))
+  }, [insumos])
+
+  const unidadesUnicas = useMemo(() => {
+    const set = new Set<string>()
+    insumos.forEach((i) => {
+      if (i.unidadMedida) set.add(i.unidadMedida)
+    })
+    return Array.from(set).sort((a, b) => {
+      const numA = parseFloat(a.match(/\d+(\.\d+)?/)?.[0] || '0')
+      const numB = parseFloat(b.match(/\d+(\.\d+)?/)?.[0] || '0')
+      if (numA !== numB) return numA - numB
+      return a.localeCompare(b, 'es')
+    })
+  }, [insumos])
+
+  const filtrosActivosCount = [
+    Boolean(filtroNombre.trim()),
+    Boolean(filtroTipo),
+    Boolean(filtroUnidad),
+    Boolean(filtroStock),
+    Boolean(filtroGenDia),
+    Boolean(filtroEstado),
+  ].filter(Boolean).length
+
+  function handleLimpiarFiltros() {
+    setFiltroNombre('')
+    setFiltroTipo('')
+    setFiltroUnidad('')
+    setFiltroStock('')
+    setFiltroGenDia('')
+    setFiltroEstado('')
+  }
+
   function handleOrdenar(columna: ColumnaOrdenInsumo) {
     if (columnaOrden === columna) {
       setDireccionOrden((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -283,8 +334,56 @@ export function InsumosTable({
     }
   }
 
-  const insumosOrdenados = useMemo(() => {
-    return [...insumos].sort((a, b) => {
+  // Filtrado + Ordenamiento
+  const insumosFiltradosYOrdenados = useMemo(() => {
+    const filtrados = insumos.filter((item) => {
+      // 1. Filtro Nombre
+      if (filtroNombre.trim()) {
+        const q = filtroNombre.trim().toLowerCase()
+        if (!item.nombre.toLowerCase().includes(q)) return false
+      }
+
+      // 2. Filtro Tipo
+      if (filtroTipo) {
+        const et = getTipoEtiqueta(item)
+        if (et !== filtroTipo) return false
+      }
+
+      // 3. Filtro Unidad
+      if (filtroUnidad) {
+        if (item.unidadMedida !== filtroUnidad) return false
+      }
+
+      // 4. Filtro Stock Actual
+      if (filtroStock) {
+        const stockNum = Number(item.stockActual) || 0
+        const estado = getEstadoStock(item)
+        if (filtroStock === 'bajo' && estado !== 'bajo') return false
+        if (filtroStock === 'medio' && estado !== 'medio') return false
+        if (filtroStock === 'normal' && estado !== 'normal') return false
+        if (filtroStock === 'agotado' && stockNum > 0) return false
+        if (filtroStock === 'disponible' && stockNum <= 0) return false
+      }
+
+      // 5. Filtro Gen / Día
+      if (filtroGenDia) {
+        const diario = Number(item.stockMinimoDiario) || 0
+        const general = Number(item.stockMinimo) || 0
+        if (filtroGenDia === 'con_diario' && diario <= 0) return false
+        if (filtroGenDia === 'sin_diario' && diario > 0) return false
+        if (filtroGenDia === 'con_general' && general <= 0) return false
+      }
+
+      // 6. Filtro Estado
+      if (filtroEstado) {
+        if (filtroEstado === 'activo' && !item.activo) return false
+        if (filtroEstado === 'inactivo' && item.activo) return false
+      }
+
+      return true
+    })
+
+    return filtrados.sort((a, b) => {
       let cmp = 0
 
       if (columnaOrden === 'tipo') {
@@ -334,7 +433,17 @@ export function InsumosTable({
 
       return direccionOrden === 'asc' ? cmp : -cmp
     })
-  }, [insumos, columnaOrden, direccionOrden])
+  }, [
+    insumos,
+    filtroNombre,
+    filtroTipo,
+    filtroUnidad,
+    filtroStock,
+    filtroGenDia,
+    filtroEstado,
+    columnaOrden,
+    direccionOrden,
+  ])
 
   async function handleCambiarActivo(insumo: Insumo) {
     const siguienteActivo = !insumo.activo
@@ -376,7 +485,7 @@ export function InsumosTable({
         onClick={() => handleOrdenar(columna)}
         title={`Ordenar por ${label} (${estaActiva && direccionOrden === 'asc' ? 'descendente' : 'ascendente'})`}
         style={{
-          padding: '10px 12px',
+          padding: '10px 12px 6px',
           textAlign: align,
           width,
           cursor: 'pointer',
@@ -407,42 +516,283 @@ export function InsumosTable({
     )
   }
 
+  const selectStyle = (activo: boolean): React.CSSProperties => ({
+    width: '100%',
+    padding: '4px 6px',
+    fontSize: 11.5,
+    borderRadius: 6,
+    border: activo ? '1px solid var(--brand-blue, #41afe0)' : '1px solid var(--input-border)',
+    background: activo ? 'rgba(65, 175, 224, 0.14)' : 'var(--input-bg)',
+    color: activo ? 'var(--brand-blue, #41afe0)' : 'var(--text-primary)',
+    fontWeight: activo ? 600 : 400,
+    outline: 'none',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+    fontFamily: 'var(--sans)',
+  })
+
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-        <thead>
-          <tr
+    <div>
+      {/* Barra superior de conteo y filtros activos */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
+          marginBottom: 12,
+          fontSize: 12.5,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: 'var(--text-secondary)' }}>
+            Mostrando <strong style={{ color: 'var(--text-primary)' }}>{insumosFiltradosYOrdenados.length}</strong> de {insumos.length} insumos
+          </span>
+          {filtrosActivosCount > 0 && (
+            <span
+              style={{
+                background: 'rgba(65, 175, 224, 0.15)',
+                color: 'var(--brand-blue)',
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '2px 8px',
+                borderRadius: 999,
+                border: '1px solid rgba(65, 175, 224, 0.3)',
+              }}
+            >
+              {filtrosActivosCount} {filtrosActivosCount === 1 ? 'filtro activo' : 'filtros activos'}
+            </span>
+          )}
+        </div>
+
+        {filtrosActivosCount > 0 && (
+          <button
+            type="button"
+            onClick={handleLimpiarFiltros}
             style={{
-              borderBottom: '2px solid var(--hr-line)',
-              fontSize: 11.5,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.4px',
-              color: 'var(--text-faint)',
+              background: 'none',
+              border: 'none',
+              color: 'var(--brand-red, #e42926)',
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '2px 6px',
+              textDecoration: 'underline',
             }}
           >
-            {renderTh('nombre', 'Nombre', 'left')}
-            {renderTh('tipo', 'Tipo', 'left')}
-            {renderTh('unidad', 'Unidad', 'left')}
-            {renderTh('stockActual', 'Stock actual', 'center', 110)}
-            {renderTh('stockMinimo', 'Gen / Día', 'left')}
-            {renderTh('activo', 'Estado', 'center', 75)}
-            <th style={{ padding: '10px 12px', width: 120, textAlign: 'center', userSelect: 'none' }}>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {insumosOrdenados.map((insumo) => (
-            <FilaInsumo
-              key={insumo.id}
-              insumo={insumo}
-              onCambiarActivo={handleCambiarActivo}
-              onActualizarStockMinimo={onActualizarStockMinimo}
-              onEditar={onEditar}
-              onEliminar={handleEliminar}
-            />
-          ))}
-        </tbody>
-      </table>
+            Limpiar todos los filtros ✕
+          </button>
+        )}
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <thead>
+            {/* Fila 1: Encabezados ordenables */}
+            <tr
+              style={{
+                borderBottom: '1px solid var(--hr-line)',
+                fontSize: 11.5,
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.4px',
+                color: 'var(--text-faint)',
+              }}
+            >
+              {renderTh('nombre', 'Nombre', 'left')}
+              {renderTh('tipo', 'Tipo', 'left')}
+              {renderTh('unidad', 'Unidad', 'left')}
+              {renderTh('stockActual', 'Stock actual', 'center', 120)}
+              {renderTh('stockMinimo', 'Gen / Día', 'left', 140)}
+              {renderTh('activo', 'Estado', 'center', 85)}
+              <th style={{ padding: '10px 12px 6px', width: 120, textAlign: 'center', userSelect: 'none' }}>
+                Acciones
+              </th>
+            </tr>
+
+            {/* Fila 2: Filtros por cada columna */}
+            <tr
+              style={{
+                borderBottom: '2px solid var(--hr-line)',
+                background: 'rgba(255, 255, 255, 0.02)',
+              }}
+            >
+              {/* Filtro Nombre */}
+              <th style={{ padding: '6px 8px 10px' }}>
+                <input
+                  type="text"
+                  placeholder="Buscar nombre..."
+                  value={filtroNombre}
+                  onChange={(e) => setFiltroNombre(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '4px 8px',
+                    fontSize: 11.5,
+                    borderRadius: 6,
+                    border: filtroNombre.trim()
+                      ? '1px solid var(--brand-blue, #41afe0)'
+                      : '1px solid var(--input-border)',
+                    background: filtroNombre.trim() ? 'rgba(65, 175, 224, 0.14)' : 'var(--input-bg)',
+                    color: 'var(--text-primary)',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'var(--sans)',
+                  }}
+                />
+              </th>
+
+              {/* Filtro Tipo */}
+              <th style={{ padding: '6px 8px 10px' }}>
+                <select
+                  value={filtroTipo}
+                  onChange={(e) => setFiltroTipo(e.target.value)}
+                  style={selectStyle(Boolean(filtroTipo))}
+                >
+                  <option value="">Todos ({tiposUnicos.length})</option>
+                  {tiposUnicos.map((tipo) => (
+                    <option key={tipo} value={tipo}>
+                      {tipo}
+                    </option>
+                  ))}
+                </select>
+              </th>
+
+              {/* Filtro Unidad */}
+              <th style={{ padding: '6px 8px 10px' }}>
+                <select
+                  value={filtroUnidad}
+                  onChange={(e) => setFiltroUnidad(e.target.value)}
+                  style={selectStyle(Boolean(filtroUnidad))}
+                >
+                  <option value="">Todas ({unidadesUnicas.length})</option>
+                  {unidadesUnicas.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
+              </th>
+
+              {/* Filtro Stock Actual */}
+              <th style={{ padding: '6px 8px 10px', textAlign: 'center' }}>
+                <select
+                  value={filtroStock}
+                  onChange={(e) => setFiltroStock(e.target.value)}
+                  style={selectStyle(Boolean(filtroStock))}
+                >
+                  <option value="">Todos</option>
+                  <option value="bajo">🔴 Bajo / Crítico</option>
+                  <option value="medio">🟡 Medio / Atención</option>
+                  <option value="normal">🟢 Normal</option>
+                  <option value="agotado">⚠️ Agotado (0)</option>
+                  <option value="disponible">✓ Con stock (&gt;0)</option>
+                </select>
+              </th>
+
+              {/* Filtro Gen / Día */}
+              <th style={{ padding: '6px 8px 10px' }}>
+                <select
+                  value={filtroGenDia}
+                  onChange={(e) => setFiltroGenDia(e.target.value)}
+                  style={selectStyle(Boolean(filtroGenDia))}
+                >
+                  <option value="">Todos</option>
+                  <option value="con_diario">Con Mín. Diario</option>
+                  <option value="sin_diario">Sin Mín. Diario</option>
+                  <option value="con_general">Con Mín. General</option>
+                </select>
+              </th>
+
+              {/* Filtro Estado */}
+              <th style={{ padding: '6px 8px 10px', textAlign: 'center' }}>
+                <select
+                  value={filtroEstado}
+                  onChange={(e) => setFiltroEstado(e.target.value)}
+                  style={selectStyle(Boolean(filtroEstado))}
+                >
+                  <option value="">Todos</option>
+                  <option value="activo">Activos</option>
+                  <option value="inactivo">Inactivos</option>
+                </select>
+              </th>
+
+              {/* Botón rápido en la celda de acciones */}
+              <th style={{ padding: '6px 8px 10px', textAlign: 'center' }}>
+                {filtrosActivosCount > 0 ? (
+                  <button
+                    type="button"
+                    onClick={handleLimpiarFiltros}
+                    title="Limpiar todos los filtros"
+                    style={{
+                      padding: '3px 8px',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      borderRadius: 6,
+                      border: '1px solid rgba(239, 68, 68, 0.4)',
+                      background: 'rgba(239, 68, 68, 0.12)',
+                      color: 'var(--brand-red, #e42926)',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    ✕ Limpiar
+                  </button>
+                ) : (
+                  <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>
+                    Filtros
+                  </span>
+                )}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {insumosFiltradosYOrdenados.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  style={{
+                    padding: '36px 16px',
+                    textAlign: 'center',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <p style={{ margin: '0 0 10px', fontSize: 14 }}>
+                    No se encontraron insumos que coincidan con los filtros aplicados.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleLimpiarFiltros}
+                    style={{
+                      background: 'rgba(65, 175, 224, 0.12)',
+                      border: '1px solid rgba(65, 175, 224, 0.3)',
+                      color: 'var(--brand-blue)',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '6px 14px',
+                      borderRadius: 8,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Restablecer filtros
+                  </button>
+                </td>
+              </tr>
+            ) : (
+              insumosFiltradosYOrdenados.map((insumo) => (
+                <FilaInsumo
+                  key={insumo.id}
+                  insumo={insumo}
+                  onCambiarActivo={handleCambiarActivo}
+                  onActualizarStockMinimo={onActualizarStockMinimo}
+                  onEditar={onEditar}
+                  onEliminar={handleEliminar}
+                />
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
