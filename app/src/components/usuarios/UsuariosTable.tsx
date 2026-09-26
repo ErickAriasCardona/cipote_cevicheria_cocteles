@@ -106,6 +106,11 @@ function FilaUsuario({ usuario, esUsuarioActual, onCambiarRol, onCambiarActivo, 
           )}
         </div>
       </td>
+      <td style={{ padding: '14px 12px', fontSize: 12.5 }}>
+        <span style={{ fontFamily: 'monospace', color: 'var(--text-secondary)' }}>
+          {usuario.email || '—'}
+        </span>
+      </td>
       <td style={{ padding: '14px 12px' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select
@@ -238,6 +243,7 @@ export function UsuariosTable({
             }}
           >
             <th style={{ padding: '10px 12px' }}>Nombre</th>
+            <th style={{ padding: '10px 12px' }}>Correo Electrónico</th>
             <th style={{ padding: '10px 12px' }}>Rol</th>
             <th style={{ padding: '10px 12px', width: 110 }}>Estado</th>
             <th style={{ padding: '10px 12px', width: 70 }}>Acciones</th>

@@ -150,10 +150,11 @@ Deno.serve(async (req: Request) => {
     .insert({
       id: userId,
       nombre_completo: datos.nombreCompleto,
+      email: datos.email,
       rol: datos.rol,
       activo: true,
     })
-    .select('id, nombre_completo, rol, activo, created_at, updated_at')
+    .select('id, nombre_completo, email, rol, activo, created_at, updated_at')
     .single()
 
   if (perfilError || !perfil) {

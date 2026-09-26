@@ -7,6 +7,7 @@ import type { Rol } from './auth'
 export interface UsuarioPerfil {
   id: string
   nombreCompleto: string
+  email?: string
   rol: Rol
   activo: boolean
   createdAt: string

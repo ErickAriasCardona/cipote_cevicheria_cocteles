@@ -19,6 +19,7 @@ import type { ActualizarUsuarioInput, CrearUsuarioInput, UsuarioPerfil } from '.
 interface UsuarioPerfilRow {
   id: string
   nombre_completo: string
+  email?: string | null
   rol: 'administrador' | 'cajero'
   activo: boolean
   created_at: string
@@ -29,6 +30,7 @@ function mapRow(row: UsuarioPerfilRow): UsuarioPerfil {
   return {
     id: row.id,
     nombreCompleto: row.nombre_completo,
+    email: row.email ?? undefined,
     rol: row.rol,
     activo: row.activo,
     createdAt: row.created_at,
@@ -40,7 +42,7 @@ export const usuariosService = {
   async listarUsuarios(): Promise<UsuarioPerfil[]> {
     const { data, error } = await supabase
       .from('usuarios_perfil')
-      .select('id, nombre_completo, rol, activo, created_at, updated_at')
+      .select('id, nombre_completo, email, rol, activo, created_at, updated_at')
       .order('created_at', { ascending: true })
     if (error) throw error
     return (data as UsuarioPerfilRow[]).map(mapRow)
@@ -85,7 +87,7 @@ export const usuariosService = {
       .from('usuarios_perfil')
       .update(payload)
       .eq('id', id)
-      .select('id, nombre_completo, rol, activo, created_at, updated_at')
+      .select('id, nombre_completo, email, rol, activo, created_at, updated_at')
       .single()
     if (error) throw error
     return mapRow(data as UsuarioPerfilRow)
